@@ -61,9 +61,16 @@ host-validation work, per the project's "not yet proven" list.
 - **Modes** — Game / Work / Teaching. Game Mode halves render resolution,
   caps the Orb at 30 fps, and cuts noise octaves so it never competes with a
   running game. Modes never change the Orb's identity.
-- **Capability orbs** — small color-coded orbs ring the main Orb. Inactive
-  = dim, active = bright + glow, blocked = dashed, disabled = nearly
-  invisible. Orbiting/docking behavior is intentionally not frozen yet.
+- **Capability orbs** — neurons in a nervous system around the Orb
+  (design C4 "Loose Council" from review). Each soma rides a slowly
+  rotating, breathing ring and connects to the core by a curved axon
+  with dendrite stubs. Energy moves as a conversation: the core sends a
+  near-white call pulse out, the neuron flashes and dwells while it
+  thinks, then answers back in its own color, and the core flashes on
+  receipt. Status drives the dialogue — active neurons are called often,
+  available ones occasionally, awaiting-approval neurons hold their
+  answer until the approval clears, and blocked/disabled ones stay
+  silent. Neurons also exchange occasional side chatter.
 - **Trust display** — verified / uncertain / conflicting / failed / unknown,
   each with a plain-language reason string. No fake confidence percentages.
 - **Telemetry rule** — every hardware gauge starts at `--` / NO TELEMETRY.
