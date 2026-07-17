@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VELMA Neural Lab — N1–N5</title>
+<style>
+:root {
+  --bg: #060309;
+  --panel-bg: rgba(11, 5, 19, 0.85);
+  --edge: rgba(168, 84, 255, 0.42);
+  --green: #39ff8e; --pink: #ff3df0; --blue: #2f9bff; --purple: #a854ff;
+  --text: #cdc3dd; --text-dim: #7d6f92;
+  --mono: "JetBrains Mono", "Fira Code", ui-monospace, Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--mono); font-size: 12px;
+  min-height: 100vh; padding: 18px;
+}
+h1 {
+  font-size: 20px; letter-spacing: 4px;
+  background: linear-gradient(90deg, var(--green), var(--pink), var(--purple), var(--blue));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 8px rgba(168, 84, 255, 0.55));
+  margin-bottom: 4px;
+}
+.sub { color: var(--text-dim); margin-bottom: 16px; letter-spacing: 1px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 14px; }
+.tile {
+  position: relative; border: 1px solid var(--edge); border-radius: 3px;
+  background: var(--panel-bg); overflow: hidden; cursor: pointer;
+}
+.tile::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--green), var(--pink), var(--purple), var(--blue));
+  opacity: 0.75; z-index: 2;
+}
+.tile canvas { display: block; width: 100%; height: 340px; }
+.tile .caption { display: flex; align-items: baseline; gap: 10px; padding: 8px 12px 10px; border-top: 1px solid rgba(168,84,255,0.18); }
+.tile .tag { font-size: 14px; font-weight: 700; letter-spacing: 2px; color: var(--pink); text-shadow: 0 0 8px rgba(255,61,240,0.55); flex: none; }
+.tile .name { letter-spacing: 2px; text-transform: uppercase; color: var(--text); }
+.tile .desc { color: var(--text-dim); font-size: 10px; line-height: 1.4; }
+.tile.expanded { position: fixed; inset: 0; z-index: 50; border-radius: 0; }
+.tile.expanded canvas { height: calc(100vh - 52px); }
+.hint-bar { margin-top: 14px; color: var(--text-dim); letter-spacing: 1px; font-size: 10px; }
+</style>
+</head>
+<body>
+<h1>VELMA NEURAL LAB</h1>
+<div class="sub">Five styles for the capability orbs as neurons in a nervous system around the main orb (glowing core stand-in). Energy transfer shows as small pulses traveling the neuron highways. Somas light up when a pulse arrives. Click a tile for fullscreen.</div>
+<div class="grid" id="grid"></div>
+<div class="hint-bar">Pick one (N1–N5) — the winner becomes the dashboard's capability layer around the Ion Storm orb.</div>
+
+<script>
+(function () {
+"use strict";
+
+var CAP_COLORS = ["#39ff8e", "#2f9bff", "#ff3df0", "#35e0ff", "#ffb02e", "#a854ff", "#39ff8e", "#2f9bff"];
+var N = 8;
+
+function hexToRgb(hex) {
+  var n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function rgba(rgb, a) { return "rgba(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + "," + a + ")"; }
+
+/* soma activity cycles so firing rates visibly change */
+function activity(t, i) {
+  return Math.pow(0.5 + 0.5 * Math.sin(t * 0.25 + i * 2.3), 2.0);
+}
+
+function drawCore(ctx, cx, cy, t) {
+  var fl = 0.5 + 0.5 * Math.sin(t * 0.6)
+    + 1.4 * Math.pow(0.5 + 0.5 * Math.sin(t * 0.23 + Math.sin(t * 0.11) * 2.0), 6.0);
+  var R = 34 + 14 * Math.min(fl, 1.6);
+  var g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+  g.addColorStop(0, "rgba(255,235,255," + Math.min(0.95, 0.35 + 0.3 * fl) + ")");
+  g.addColorStop(0.35, "rgba(255,61,240,0.30)");
+  g.addColorStop(0.7, "rgba(168,84,255,0.14)");
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
+}
+
+/* soma: cell body + short dendrites; glow scales with charge */
+function drawSoma(ctx, x, y, rgb, charge, scale, seed) {
+  var r = 9 * (scale || 1);
+  var glowR = r * (2.2 + 2.4 * charge);
+  var g = ctx.createRadialGradient(x, y, 0, x, y, glowR);
+  g.addColorStop(0, rgba(rgb, 0.55 + 0.4 * charge));
+  g.addColorStop(0.35, rgba(rgb, 0.25 + 0.35 * charge));
+  g.addColorStop(1, rgba(rgb, 0));
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(x, y, glowR, 0, Math.PI * 2); ctx.fill();
+  var b = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 0, x, y, r);
+  b.addColorStop(0, "rgba(255,255,255," + (0.5 + 0.4 * charge) + ")");
+  b.addColorStop(0.4, rgba(rgb, 0.95));
+  b.addColorStop(1, "rgba(4,1,9,0.9)");
+  ctx.fillStyle = b;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = rgba(rgb, 0.35 + 0.4 * charge);
+  ctx.lineWidth = 1;
+  for (var d = 0; d < 5; d++) {
+    var a = seed * 1.7 + d * (Math.PI * 2 / 5);
+    var r1 = r + 3, r2 = r + 9 + (d % 2) * 5;
+    ctx.beginPath();
+    ctx.moveTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1);
+    ctx.quadraticCurveTo(
+      x + Math.cos(a + 0.3) * (r1 + 5), y + Math.sin(a + 0.3) * (r1 + 5),
+      x + Math.cos(a + 0.15) * r2, y + Math.sin(a + 0.15) * r2);
+    ctx.stroke();
+  }
+}
+
+function bez(p0, c, p1, u) {
+  var v = 1 - u;
+  return [v * v * p0[0] + 2 * v * u * c[0] + u * u * p1[0],
+          v * v * p0[1] + 2 * v * u * c[1] + u * u * p1[1]];
+}
+
+function drawAxon(ctx, p0, c, p1, rgb, alpha, width) {
+  ctx.strokeStyle = rgba(rgb, alpha);
+  ctx.lineWidth = width || 1;
+  ctx.beginPath();
+  ctx.moveTo(p0[0], p0[1]);
+  ctx.quadraticCurveTo(c[0], c[1], p1[0], p1[1]);
+  ctx.stroke();
+}
+
+function drawPulse(ctx, pt, rgb, s) {
+  var g = ctx.createRadialGradient(pt[0], pt[1], 0, pt[0], pt[1], 6 * s);
+  g.addColorStop(0, rgba(rgb, 0.95));
+  g.addColorStop(0.4, rgba(rgb, 0.5));
+  g.addColorStop(1, rgba(rgb, 0));
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(pt[0], pt[1], 6 * s, 0, Math.PI * 2); ctx.fill();
+}
+
+function ctrlFor(p0, p1, bend) {
+  var mx = (p0[0] + p1[0]) / 2, my = (p0[1] + p1[1]) / 2;
+  var dx = p1[0] - p0[0], dy = p1[1] - p0[1];
+  var len = Math.max(Math.hypot(dx, dy), 1);
+  return [mx - dy / len * bend, my + dx / len * bend];
+}
+
+/* pulse pool helper shared by variants */
+function makePulseSys() {
+  return { list: [], spawn: function (p0, c, p1, rgb, speed, cb) {
+    this.list.push({ p0: p0, c: c, p1: p1, rgb: rgb, u: 0, speed: speed, cb: cb });
+  }, step: function (ctx, dt) {
+    var alive = [];
+    for (var i = 0; i < this.list.length; i++) {
+      var p = this.list[i];
+      p.u += dt * p.speed;
+      if (p.u >= 1) { if (p.cb) { p.cb(); } continue; }
+      drawPulse(ctx, bez(p.p0, p.c, p.p1, p.u), p.rgb, 1);
+      alive.push(p);
+    }
+    this.list = alive;
+  } };
+}
+
+/* =========================================================
+   N1 — AXON RING: orbiting somas, curved axons to the core,
+   pulses flow soma -> core. Charge = arrival flash.
+   ========================================================= */
+function VariantN1() {
+  this.pulses = makePulseSys();
+  this.charge = new Array(N).fill(0);
+  this.next = new Array(N).fill(0).map(function (_, i) { return i * 0.4; });
+}
+VariantN1.prototype.frame = function (ctx, w, h, t, dt) {
+  var cx = w / 2, cy = h / 2;
+  var self = this;
+  var pos = [];
+  for (var i = 0; i < N; i++) {
+    var Rx = Math.min(w, h) * (0.30 + 0.05 * (i % 3));
+    var Ry = Rx * (0.30 + 0.08 * (i % 2));
+    var tilt = i * 0.85;
+    var a = i / N * Math.PI * 2 + t * (0.12 + 0.03 * (i % 4));
+    var lx = Math.cos(a) * Rx, ly = Math.sin(a) * Ry;
+    pos.push([cx + lx * Math.cos(tilt) - ly * Math.sin(tilt),
+              cy + lx * Math.sin(tilt) + ly * Math.cos(tilt)]);
+  }
+  for (i = 0; i < N; i++) {
+    var rgb = hexToRgb(CAP_COLORS[i]);
+    var act = activity(t, i);
+    var c = ctrlFor(pos[i], [cx, cy], (i % 2 ? -1 : 1) * 50);
+    drawAxon(ctx, pos[i], c, [cx, cy], rgb, 0.08 + 0.16 * act, 1 + act);
+    this.next[i] -= dt;
+    if (this.next[i] <= 0) {
+      (function (idx) {
+        self.pulses.spawn(pos[idx], c, [cx, cy], rgb, 0.4 + 0.3 * act, null);
+      })(i);
+      this.next[i] = (0.6 + (1 - act) * 3.0) * (0.7 + Math.random() * 0.6);
+      this.charge[i] = 1;
+    }
+    this.charge[i] = Math.max(0, this.charge[i] - dt * 0.8);
+    drawSoma(ctx, pos[i][0], pos[i][1], rgb, 0.3 * act + 0.7 * this.charge[i], 1, i);
+  }
+  drawCore(ctx, cx, cy, t);
+  this.pulses.step(ctx, dt);
+};
+
+/* =========================================================
+   N2 — DENDRITE WEB: neurons link to neighbors AND the core;
+   pulses hop neuron -> neuron -> core along the web.
+   ========================================================= */
+function VariantN2() {
+  this.pulses = makePulseSys();
+  this.charge = new Array(N).fill(0);
+  this.next = new Array(N).fill(0).map(function (_, i) { return i * 0.5; });
+}
+VariantN2.prototype.frame = function (ctx, w, h, t, dt) {
+  var cx = w / 2, cy = h / 2;
+  var self = this;
+  var pos = [];
+  for (var i = 0; i < N; i++) {
+    var R = Math.min(w, h) * (0.28 + 0.07 * ((i * 5) % 3) / 2);
+    var a = i / N * Math.PI * 2 + t * 0.05 + Math.sin(t * 0.3 + i) * 0.04;
+    pos.push([cx + Math.cos(a) * R * 1.25, cy + Math.sin(a) * R * 0.85]);
+  }
+  for (i = 0; i < N; i++) {
+    var rgb = hexToRgb(CAP_COLORS[i]);
+    var act = activity(t, i);
+    var nb = (i + 1) % N;
+    var cN = ctrlFor(pos[i], pos[nb], 26);
+    var cC = ctrlFor(pos[i], [cx, cy], (i % 2 ? -1 : 1) * 40);
+    drawAxon(ctx, pos[i], cN, pos[nb], rgb, 0.10 + 0.12 * act, 1);
+    drawAxon(ctx, pos[i], cC, [cx, cy], rgb, 0.06 + 0.10 * act, 1);
+    this.next[i] -= dt;
+    if (this.next[i] <= 0) {
+      (function (idx, nbi, cn, cc) {
+        var rgb2 = hexToRgb(CAP_COLORS[idx]);
+        // hop to neighbor, then neighbor relays to core
+        self.pulses.spawn(pos[idx], cn, pos[nbi], rgb2, 0.55, function () {
+          self.charge[nbi] = 1;
+          var cc2 = ctrlFor(pos[nbi], [cx, cy], (nbi % 2 ? -1 : 1) * 40);
+          self.pulses.spawn(pos[nbi], cc2, [cx, cy], rgb2, 0.5, null);
+        });
+      })(i, nb, cN, cC);
+      this.next[i] = (0.8 + (1 - act) * 3.4) * (0.7 + Math.random() * 0.6);
+      this.charge[i] = 1;
+    }
+    this.charge[i] = Math.max(0, this.charge[i] - dt * 0.8);
+    drawSoma(ctx, pos[i][0], pos[i][1], rgb, 0.25 * act + 0.75 * this.charge[i], 1, i);
+  }
+  drawCore(ctx, cx, cy, t);
+  this.pulses.step(ctx, dt);
+};
+
+/* =========================================================
+   N3 — SYNAPSE CHAIN: a loop; pulses run the ring, firing
+   each soma in turn; every few laps a spur dives to the core.
+   ========================================================= */
+function VariantN3() {
+  this.pulses = makePulseSys();
+  this.charge = new Array(N).fill(0);
+  this.timer = 0.5;
+}
+VariantN3.prototype.frame = function (ctx, w, h, t, dt) {
+  var cx = w / 2, cy = h / 2;
+  var self = this;
+  var pos = [];
+  for (var i = 0; i < N; i++) {
+    var a = i / N * Math.PI * 2 + t * 0.06;
+    pos.push([cx + Math.cos(a) * Math.min(w, h) * 0.38,
+              cy + Math.sin(a) * Math.min(w, h) * 0.30]);
+  }
+  for (i = 0; i < N; i++) {
+    var rgb = hexToRgb(CAP_COLORS[i]);
+    var nb = (i + 1) % N;
+    drawAxon(ctx, pos[i], ctrlFor(pos[i], pos[nb], 20), pos[nb], rgb, 0.16, 1.2);
+  }
+  this.timer -= dt;
+  if (this.timer <= 0) {
+    var start = Math.floor(Math.random() * N);
+    var hop = function (idx, remaining) {
+      var nbi = (idx + 1) % N;
+      var rgb2 = hexToRgb(CAP_COLORS[idx]);
+      self.pulses.spawn(pos[idx], ctrlFor(pos[idx], pos[nbi], 20), pos[nbi], rgb2, 0.9, function () {
+        self.charge[nbi] = 1;
+        if (remaining > 0) { hop(nbi, remaining - 1); }
+        else {
+          self.pulses.spawn(pos[nbi], ctrlFor(pos[nbi], [cx, cy], 30), [cx, cy],
+            hexToRgb(CAP_COLORS[nbi]), 0.6, null);
+        }
+      });
+    };
+    hop(start, 3 + Math.floor(Math.random() * 4));
+    this.timer = 1.2 + Math.random() * 1.2;
+  }
+  for (i = 0; i < N; i++) {
+    this.charge[i] = Math.max(0, this.charge[i] - dt * 1.2);
+    drawSoma(ctx, pos[i][0], pos[i][1], hexToRgb(CAP_COLORS[i]),
+      0.2 * activity(t, i) + 0.8 * this.charge[i], 1, i);
+  }
+  drawCore(ctx, cx, cy, t);
+  this.pulses.step(ctx, dt);
+};
+
+/* =========================================================
+   N4 — NERVE TREE: trunks from the core fork into branches
+   ending at somas; pulses travel core -> tips, splitting.
+   ========================================================= */
+function VariantN4() {
+  this.pulses = makePulseSys();
+  this.charge = new Array(N).fill(0);
+  this.timer = 0.4;
+}
+VariantN4.prototype.layout = function (w, h, t) {
+  var cx = w / 2, cy = h / 2;
+  var trunks = [], somas = [];
+  var trunkCount = 4;
+  for (var k = 0; k < trunkCount; k++) {
+    var ta = k / trunkCount * Math.PI * 2 + 0.5 + t * 0.03;
+    var mid = [cx + Math.cos(ta) * Math.min(w, h) * 0.20,
+               cy + Math.sin(ta) * Math.min(w, h) * 0.16];
+    trunks.push({ a: ta, mid: mid, tips: [] });
+  }
+  for (var i = 0; i < N; i++) {
+    var k2 = i % trunkCount;
+    var spread = (Math.floor(i / trunkCount) - 0.5) * 0.55;
+    var a2 = trunks[k2].a + spread + Math.sin(t * 0.4 + i) * 0.03;
+    var tip = [cx + Math.cos(a2) * Math.min(w, h) * 0.40,
+               cy + Math.sin(a2) * Math.min(w, h) * 0.32];
+    trunks[k2].tips.push(i);
+    somas.push({ tip: tip, trunk: k2 });
+  }
+  return { cx: cx, cy: cy, trunks: trunks, somas: somas };
+};
+VariantN4.prototype.frame = function (ctx, w, h, t, dt) {
+  var L = this.layout(w, h, t);
+  var self = this;
+  for (var k = 0; k < L.trunks.length; k++) {
+    drawAxon(ctx, [L.cx, L.cy], ctrlFor([L.cx, L.cy], L.trunks[k].mid, 14),
+      L.trunks[k].mid, hexToRgb("#a854ff"), 0.22, 1.6);
+  }
+  for (var i = 0; i < N; i++) {
+    var s = L.somas[i];
+    var rgb = hexToRgb(CAP_COLORS[i]);
+    drawAxon(ctx, L.trunks[s.trunk].mid, ctrlFor(L.trunks[s.trunk].mid, s.tip, 18),
+      s.tip, rgb, 0.10 + 0.12 * activity(t, i), 1);
+  }
+  this.timer -= dt;
+  if (this.timer <= 0) {
+    var k3 = Math.floor(Math.random() * L.trunks.length);
+    var trunk = L.trunks[k3];
+    self.pulses.spawn([L.cx, L.cy], ctrlFor([L.cx, L.cy], trunk.mid, 14), trunk.mid,
+      hexToRgb("#e9d5ff"), 0.8, function () {
+        trunk.tips.forEach(function (idx) {
+          var s2 = self.layout(w, h, t).somas[idx];
+          self.pulses.spawn(trunk.mid, ctrlFor(trunk.mid, s2.tip, 18), s2.tip,
+            hexToRgb(CAP_COLORS[idx]), 0.7, function () { self.charge[idx] = 1; });
+        });
+      });
+    this.timer = 0.9 + Math.random() * 1.1;
+  }
+  for (i = 0; i < N; i++) {
+    this.charge[i] = Math.max(0, this.charge[i] - dt * 1.0);
+    drawSoma(ctx, L.somas[i].tip[0], L.somas[i].tip[1], hexToRgb(CAP_COLORS[i]),
+      0.2 * activity(t, i) + 0.8 * this.charge[i], 1, i);
+  }
+  drawCore(ctx, L.cx, L.cy, t);
+  this.pulses.step(ctx, dt);
+};
+
+/* =========================================================
+   N5 — PLEXUS DRIFT: free-floating neurons; links form and
+   dissolve by proximity; pulses ride whatever links exist.
+   ========================================================= */
+function VariantN5() {
+  this.pulses = makePulseSys();
+  this.charge = new Array(N).fill(0);
+  this.next = new Array(N).fill(0).map(function (_, i) { return i * 0.4; });
+  this.seeds = new Array(N).fill(0).map(function (_, i) { return i * 7.3 + 1.7; });
+}
+VariantN5.prototype.frame = function (ctx, w, h, t, dt) {
+  var cx = w / 2, cy = h / 2;
+  var self = this;
+  var pos = [];
+  for (var i = 0; i < N; i++) {
+    var s = this.seeds[i];
+    pos.push([
+      cx + Math.cos(t * 0.11 + s) * w * 0.26 + Math.cos(t * 0.23 + s * 2.0) * w * 0.07,
+      cy + Math.sin(t * 0.13 + s * 1.3) * h * 0.26 + Math.sin(t * 0.19 + s) * h * 0.06,
+    ]);
+  }
+  var maxD = Math.min(w, h) * 0.34;
+  for (i = 0; i < N; i++) {
+    var rgb = hexToRgb(CAP_COLORS[i]);
+    // proximity links to other neurons
+    for (var j = i + 1; j < N; j++) {
+      var d = Math.hypot(pos[i][0] - pos[j][0], pos[i][1] - pos[j][1]);
+      if (d < maxD) {
+        var aL = (1 - d / maxD) * 0.22;
+        drawAxon(ctx, pos[i], ctrlFor(pos[i], pos[j], 16), pos[j], rgb, aL, 1);
+      }
+    }
+    // always tethered to the core
+    var dc = Math.hypot(pos[i][0] - cx, pos[i][1] - cy);
+    drawAxon(ctx, pos[i], ctrlFor(pos[i], [cx, cy], 30), [cx, cy], rgb,
+      0.05 + 0.10 * activity(t, i), 1);
+    this.next[i] -= dt;
+    if (this.next[i] <= 0) {
+      // fire along the closest link (neuron or core)
+      var best = -1, bestD = maxD;
+      for (j = 0; j < N; j++) {
+        if (j === i) { continue; }
+        var d2 = Math.hypot(pos[i][0] - pos[j][0], pos[i][1] - pos[j][1]);
+        if (d2 < bestD) { bestD = d2; best = j; }
+      }
+      var target = best >= 0 && bestD < dc ? pos[best] : [cx, cy];
+      (function (idx, tgt, bi) {
+        self.pulses.spawn(pos[idx], ctrlFor(pos[idx], tgt, 20), tgt,
+          hexToRgb(CAP_COLORS[idx]), 0.55, function () {
+            if (bi >= 0) { self.charge[bi] = 1; }
+          });
+      })(i, target, best >= 0 && bestD < dc ? best : -1);
+      this.next[i] = (0.7 + (1 - activity(t, i)) * 2.8) * (0.7 + Math.random() * 0.6);
+      this.charge[i] = Math.max(this.charge[i], 0.7);
+    }
+    this.charge[i] = Math.max(0, this.charge[i] - dt * 0.9);
+  }
+  for (i = 0; i < N; i++) {
+    drawSoma(ctx, pos[i][0], pos[i][1], hexToRgb(CAP_COLORS[i]),
+      0.25 * activity(t, i) + 0.75 * this.charge[i], 1, i);
+  }
+  drawCore(ctx, cx, cy, t);
+  this.pulses.step(ctx, dt);
+};
+
+/* ---------- page assembly ---------- */
+
+var VARIANTS = [
+  { tag: "N1", name: "Axon Ring", make: function () { return new VariantN1(); },
+    desc: "Neurons orbit on tilted planes, each wired to the core by a curved axon. Pulses stream soma-to-core; the soma flashes when it fires." },
+  { tag: "N2", name: "Dendrite Web", make: function () { return new VariantN2(); },
+    desc: "Neurons link to their neighbors as well as the core. Pulses hop neuron-to-neuron, then get relayed inward — a chain of firings." },
+  { tag: "N3", name: "Synapse Chain", make: function () { return new VariantN3(); },
+    desc: "A closed loop. A pulse races around the ring lighting each soma in turn, then dives to the core — visible signal propagation." },
+  { tag: "N4", name: "Nerve Tree", make: function () { return new VariantN4(); },
+    desc: "Trunks grow out of the core and fork into branches ending at neurons. Pulses leave the core and split at each fork — a real dendritic tree." },
+  { tag: "N5", name: "Plexus Drift", make: function () { return new VariantN5(); },
+    desc: "Free-floating neurons; links form and dissolve as they drift near each other. Pulses ride the nearest living link. The most organic." },
+];
+
+var grid = document.getElementById("grid");
+var tiles = [];
+
+VARIANTS.forEach(function (v) {
+  var tile = document.createElement("div");
+  tile.className = "tile";
+  var canvas = document.createElement("canvas");
+  tile.appendChild(canvas);
+  var cap = document.createElement("div");
+  cap.className = "caption";
+  var tag = document.createElement("span");
+  tag.className = "tag"; tag.textContent = v.tag;
+  var wrap = document.createElement("span");
+  var name = document.createElement("div");
+  name.className = "name"; name.textContent = v.name;
+  var desc = document.createElement("div");
+  desc.className = "desc"; desc.textContent = v.desc;
+  wrap.appendChild(name); wrap.appendChild(desc);
+  cap.appendChild(tag); cap.appendChild(wrap);
+  tile.appendChild(cap);
+  grid.appendChild(tile);
+  tile.addEventListener("click", function () {
+    var was = tile.classList.contains("expanded");
+    tiles.forEach(function (o) { o.tile.classList.remove("expanded"); });
+    if (!was) { tile.classList.add("expanded"); }
+  });
+  tiles.push({ tile: tile, canvas: canvas, ctx: canvas.getContext("2d"), impl: v.make() });
+});
+
+var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+var start = performance.now();
+var last = start;
+
+function frame(now) {
+  var dt = Math.min((now - last) / 1000, 0.05) * (reduced ? 0.15 : 1);
+  last = now;
+  var t = ((now - start) / 1000) * (reduced ? 0.15 : 1);
+  tiles.forEach(function (o, i) {
+    var c = o.canvas;
+    var w = Math.max(1, Math.floor(c.clientWidth));
+    var h = Math.max(1, Math.floor(c.clientHeight));
+    if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+    o.ctx.clearRect(0, 0, w, h);
+    o.impl.frame(o.ctx, w, h, t + i * 9.1, dt);
+  });
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

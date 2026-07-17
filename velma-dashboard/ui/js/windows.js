@@ -31,11 +31,14 @@
     };
   }
 
+  var registry = [];
+
   function makeWindow(panel) {
     var id = panel.id;
     var title = panel.querySelector("h2");
     if (!title) { return; }
 
+    registry.push({ id: id, title: title.textContent.trim(), panel: panel });
     panel.classList.add("win");
 
     var btn = document.createElement("button");
@@ -102,6 +105,30 @@
       panel.dataset.placed = "1";
     }
     if (st && st.min) { setMin(true); }
+    if (st && st.hid) { panel.style.display = "none"; }
+  }
+
+  /* Settings: which panels appear on the main dashboard. */
+  function setHidden(id, hid) {
+    var entry = null;
+    for (var i = 0; i < registry.length; i++) {
+      if (registry[i].id === id) { entry = registry[i]; break; }
+    }
+    if (!entry) { return; }
+    entry.panel.style.display = hid ? "none" : "";
+    var s = saved[id] || {};
+    s.hid = hid;
+    persist(id, s);
+  }
+
+  function listPanels() {
+    return registry.map(function (e) {
+      return {
+        id: e.id,
+        title: e.title,
+        hidden: e.panel.style.display === "none",
+      };
+    });
   }
 
   /* Stack panels that have no saved position into default columns. */
@@ -152,5 +179,9 @@
   }
 
   window.VELMA = window.VELMA || {};
-  window.VELMA.windows = { init: init };
+  window.VELMA.windows = {
+    init: init,
+    setHidden: setHidden,
+    listPanels: listPanels,
+  };
 })();

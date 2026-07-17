@@ -212,6 +212,7 @@
       if (!c) { return; }
       c.node.classList.toggle("active", cap.status === "active");
       c.node.classList.toggle("blocked", cap.status === "blocked");
+      c.status = cap.status;
       c.vis = cap.status === "active" ? 1.0
         : cap.status === "awaiting" ? 0.8
         : cap.status === "available" ? 0.55

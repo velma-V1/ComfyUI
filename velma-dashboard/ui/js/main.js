@@ -111,6 +111,7 @@
   var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   function applyReducedMotion() {
     if (orb) { orb.setReducedMotion(reducedMotion); }
+    if (V.neuralLayer) { V.neuralLayer.reducedMotion = reducedMotion; }
     btnReduced.classList.toggle("active", reducedMotion);
   }
   btnReduced.addEventListener("click", function () {
@@ -301,6 +302,49 @@
   syncPalette(V.paletteColors, V.palette.currentName());
   V.windows.init();
 
+  /* ---------- panel chooser: pick what the dashboard shows ---------- */
+
+  var btnPanelMenu = document.getElementById("btn-panel-menu");
+  var panelMenu = document.getElementById("panel-menu");
+
+  function buildPanelMenu() {
+    while (panelMenu.firstChild) { panelMenu.removeChild(panelMenu.firstChild); }
+    var title = document.createElement("div");
+    title.className = "pm-title";
+    title.textContent = "Visible Panels";
+    panelMenu.appendChild(title);
+    V.windows.listPanels().forEach(function (p) {
+      var label = document.createElement("label");
+      var box = document.createElement("input");
+      box.type = "checkbox";
+      box.checked = !p.hidden;
+      box.addEventListener("change", function () {
+        V.windows.setHidden(p.id, !box.checked);
+      });
+      label.appendChild(box);
+      label.appendChild(document.createTextNode(p.title));
+      panelMenu.appendChild(label);
+    });
+  }
+
+  btnPanelMenu.addEventListener("click", function (ev) {
+    ev.stopPropagation();
+    if (panelMenu.hidden) {
+      buildPanelMenu();
+      panelMenu.hidden = false;
+      btnPanelMenu.classList.add("active");
+    } else {
+      panelMenu.hidden = true;
+      btnPanelMenu.classList.remove("active");
+    }
+  });
+  document.addEventListener("click", function (ev) {
+    if (!panelMenu.hidden && !panelMenu.contains(ev.target)) {
+      panelMenu.hidden = true;
+      btnPanelMenu.classList.remove("active");
+    }
+  });
+
   /* ---------- animation loop ---------- */
 
   var bootTime = performance.now();
@@ -341,6 +385,22 @@
       c.node.style.opacity = (vis * (0.45 + 0.55 * df)).toFixed(3);
       c.node.style.zIndex = depth > 0 ? "6" : "3";
       c.node.style.filter = depth > 0 ? "" : "blur(0.7px) saturate(0.75)";
+      // published for the neural link layer
+      c.x = x; c.y = y; c.scale = scale; c.depthFactor = df;
+    });
+  }
+
+  var neural = new V.Neural(document.getElementById("neural-canvas"));
+  V.neuralLayer = neural;
+  neural.reducedMotion = reducedMotion;
+  function neuralCaps() {
+    return Object.keys(capNodes).map(function (id) {
+      var c = capNodes[id];
+      return {
+        id: id, index: c.index, color: c.color,
+        status: c.status || "available",
+        x: c.x, y: c.y, scale: c.scale, depthFactor: c.depthFactor,
+      };
     });
   }
 
@@ -355,6 +415,7 @@
 
     var dt = Math.min((now - lastGaugeDraw) / 1000, 0.1);
     lastGaugeDraw = now;
+    neural.draw(neuralCaps(), now, dt);
     Object.keys(gauges).forEach(function (k) { gauges[k].draw(dt); });
 
     if (now - lastHud > 500) {
