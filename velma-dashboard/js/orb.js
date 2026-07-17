@@ -28,11 +28,10 @@
     "uniform float u_accentAmt;",    // how strongly accent tints rim 0..1
     "uniform float u_particleAmt;",  // inward particle density 0..1
     "uniform float u_dim;",          // global dimmer (offline/failure)
-    "uniform float u_octaves;",      // fbm octave budget (perf scaling)",
-    "",
-    "const vec3 GREEN = vec3(0.22, 1.00, 0.55);",
-    "const vec3 PINK  = vec3(1.00, 0.24, 0.94);",
-    "const vec3 BLUE  = vec3(0.18, 0.61, 1.00);",
+    "uniform float u_octaves;",      // fbm octave budget (perf scaling)
+    "uniform vec3  u_dyeG;",         // dye role: base (default neon green)
+    "uniform vec3  u_dyeP;",         // dye role: creative (default neon pink)
+    "uniform vec3  u_dyeB;",         // dye role: logic (default neon blue)
     "",
     "float hash(vec2 p) {",
     "  return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);",
@@ -80,7 +79,7 @@
     "  float wp = pow(fp, 2.6) * u_weights.y;",
     "  float wb = pow(fb, 2.6) * u_weights.z;",
     "  float wsum = wg + wp + wb + 1e-4;",
-    "  vec3 dye = (GREEN * wg + PINK * wp + BLUE * wb) / wsum;",
+    "  vec3 dye = (u_dyeG * wg + u_dyeP * wp + u_dyeB * wb) / wsum;",
     "",
     "  float filaments = pow(fbm(p2 * 2.1 - t * 0.18 * u_flowSpeed), 3.0);",
     "  vec3 inner = dye * (0.55 + 2.4 * filaments) * (0.8 + 0.5 * breath);",
@@ -168,7 +167,7 @@
     this.u = {};
     var names = ["u_res", "u_time", "u_weights", "u_intensity", "u_energy",
       "u_turbulence", "u_flowSpeed", "u_pulseSpeed", "u_accent", "u_accentAmt",
-      "u_particleAmt", "u_dim", "u_octaves"];
+      "u_particleAmt", "u_dim", "u_octaves", "u_dyeG", "u_dyeP", "u_dyeB"];
     for (var i = 0; i < names.length; i++) {
       this.u[names[i]] = gl.getUniformLocation(prog, names[i]);
     }
@@ -181,6 +180,13 @@
       particleAmt: 0.3, dim: 1.0,
     };
     this.current = JSON.parse(JSON.stringify(this.target));
+
+    // Dye palette (base / creative / logic roles), rgb 0..1
+    this.dye = [
+      [0.22, 1.00, 0.55],
+      [1.00, 0.24, 0.94],
+      [0.18, 0.61, 1.00],
+    ];
 
     // Performance profile
     this.resScale = 1.0;
@@ -197,6 +203,10 @@
     this._fpsWindow = performance.now();
     this.fps = 0;
   }
+
+  Orb.prototype.setDyePalette = function (colors) {
+    this.dye = colors;
+  };
 
   Orb.prototype.setPerformanceProfile = function (p) {
     this.resScale = p.resScale;
@@ -272,6 +282,9 @@
     gl.uniform1f(u.u_particleAmt, this.reducedMotion ? 0.0 : c.particleAmt);
     gl.uniform1f(u.u_dim, c.dim);
     gl.uniform1f(u.u_octaves, this.octaves);
+    gl.uniform3f(u.u_dyeG, this.dye[0][0], this.dye[0][1], this.dye[0][2]);
+    gl.uniform3f(u.u_dyeP, this.dye[1][0], this.dye[1][1], this.dye[1][2]);
+    gl.uniform3f(u.u_dyeB, this.dye[2][0], this.dye[2][1], this.dye[2][2]);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
 
     this._frames++;

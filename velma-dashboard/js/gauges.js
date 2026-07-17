@@ -73,12 +73,13 @@
     ctx.arc(cx, cy, R - 8, START + SWEEP * redFrac, START + SWEEP);
     ctx.stroke();
 
-    // value arc
+    // value arc (colors follow the active accessibility palette)
+    var pal = (window.VELMA && window.VELMA.paletteColors) || {};
     if (!noData) {
       var col;
-      if (frac >= redFrac) { col = "#ff4d5e"; }
-      else if (frac >= redFrac * 0.8) { col = "#ffb02e"; }
-      else { col = "#39ff8e"; }
+      if (frac >= redFrac) { col = pal.bad || "#ff4d5e"; }
+      else if (frac >= redFrac * 0.8) { col = pal.warn || "#ffb02e"; }
+      else { col = pal.ok || "#39ff8e"; }
       ctx.strokeStyle = col;
       ctx.shadowColor = col;
       ctx.shadowBlur = 8;
@@ -101,14 +102,15 @@
     }
 
     // needle
+    var needleCol = pal.needle || "#ff3df0";
     var na = START + SWEEP * (noData ? 0 : frac);
-    ctx.strokeStyle = noData ? "rgba(122,135,148,0.6)" : "#ff3df0";
+    ctx.strokeStyle = noData ? "rgba(122,135,148,0.6)" : needleCol;
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.lineTo(cx + Math.cos(na) * (R - 20), cy + Math.sin(na) * (R - 20));
     ctx.stroke();
-    ctx.fillStyle = noData ? "#7a8794" : "#ff3df0";
+    ctx.fillStyle = noData ? "#7a8794" : needleCol;
     ctx.beginPath();
     ctx.arc(cx, cy, 3, 0, Math.PI * 2);
     ctx.fill();

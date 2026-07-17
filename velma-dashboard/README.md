@@ -43,16 +43,34 @@ all scripts are classic scripts, not modules.)
   Values render only when a snapshot supplies them. The built-in demo feed
   is opt-in and labeled **SIMULATED** in the UI.
 - **Accessibility** — honors `prefers-reduced-motion` and has a manual
-  Reduced Motion toggle (near-static orb, particles off). Color-blind
-  alternative palettes are planned, not yet implemented.
-- **Security** — no network fetches, no `innerHTML`; all DOM built with
+  Reduced Motion toggle (near-static orb, particles off). Color vision
+  palettes: DEFAULT, DEUTAN (blue-yellow status axis for red-green CVD),
+  and TRITAN (red-green status axis for blue-yellow CVD). The selection
+  persists in `localStorage` and remaps the orb dyes, gauges, bars, legend,
+  and status colors together. Every status also has a text label, so color
+  is never the only channel. Palette values are initial and should be
+  validated with CVD simulators.
+- **Security** — the page itself performs no network fetches; the only
+  network path is the opt-in Core link below, which is restricted to
+  loopback (`127.0.0.1` / `localhost` / `[::1]`) WebSocket URLs and
+  rejects anything else. No `innerHTML`; all DOM built with
   `createElement`/`textContent`. Snapshot ingestion validates enums and
   clamps numbers.
 
 ## Feeding real data
 
-The dashboard is a UI only. VELMA Core (or the Tauri IPC bridge) pushes
-strict snapshots:
+The dashboard is a UI only. Three ways snapshots arrive, all local:
+
+1. **Tauri v2 events** — when running inside the Tauri shell, the Rust
+   layer relays Core's IPC as `velma://snapshot` webview events; the
+   bridge subscribes automatically at boot.
+2. **Loopback WebSocket** — the "Core Link" button connects to
+   `ws://127.0.0.1:8765/state` (override with `?core=<port>` or
+   `?core=ws://127.0.0.1:PORT/path`). Each WS message is one JSON
+   snapshot. Reconnects with exponential backoff; on link loss the UI
+   drops to OFFLINE and nulls all telemetry so stale numbers never
+   render as live. Non-loopback URLs are refused.
+3. **Direct call** — `VELMA.state.ingestSnapshot(snapshot, "live")`:
 
 ```js
 VELMA.state.ingestSnapshot({
@@ -77,7 +95,9 @@ Invalid states/enums are rejected; unknown fields ignored; numbers clamped.
 | --- | --- |
 | `index.html` | Layout: header, left/right panels, orb stage, bottom bar |
 | `css/dashboard.css` | Dark neon theme, panels, grid |
+| `js/palette.js` | Color vision palettes (default / deutan / tritan) |
 | `js/state.js` | Snapshot store, validation, opt-in SIMULATED demo feed |
+| `js/bridge.js` | Core link: Tauri v2 events + loopback-only WebSocket |
 | `js/orb.js` | WebGL orb renderer (tie-dye shader, particles, perf scaling) |
 | `js/gauges.js` | Canvas 2D automotive-style gauges |
 | `js/panels.js` | DOM panel builders (no innerHTML) |

@@ -85,10 +85,12 @@
   }
 
   function buildBlendLegend(listNode) {
+    var dye = window.VELMA.paletteColors.dye;
+    clear(listNode);
     [
-      ["#39ff8e", "GREEN = BASE INTELLIGENCE"],
-      ["#ff3df0", "PINK = CREATIVE / GENERATION"],
-      ["#2f9bff", "BLUE = LOGIC / REASONING"],
+      [dye.green, "BASE INTELLIGENCE"],
+      [dye.pink, "CREATIVE / GENERATION"],
+      [dye.blue, "LOGIC / REASONING"],
     ].forEach(function (pair) {
       var li = el("li");
       var sw = el("span", "swatch");
@@ -168,20 +170,20 @@
 
   /* ---------- trust ---------- */
 
-  var TRUST_COLORS = {
-    verified: "#39ff8e",
-    uncertain: "#ffb02e",
-    conflicting: "#ffb02e",
-    failed: "#ff4d5e",
-    unknown: "#7a8794",
-  };
+  function trustColor(level) {
+    var pal = window.VELMA.paletteColors;
+    if (level === "verified") { return pal.ok; }
+    if (level === "uncertain" || level === "conflicting") { return pal.warn; }
+    if (level === "failed") { return pal.bad; }
+    return "#7a8794";
+  }
 
   function updateTrust(chipNode, detailNode, trust) {
     chipNode.dataset.trust = trust.level;
     chipNode.textContent = "TRUST: " + trust.level.toUpperCase();
     clear(detailNode);
     var state = el("div", "trust-state", trust.level.toUpperCase());
-    state.style.color = TRUST_COLORS[trust.level] || TRUST_COLORS.unknown;
+    state.style.color = trustColor(trust.level);
     detailNode.appendChild(state);
     detailNode.appendChild(el("div", "trust-reason", trust.reason));
   }

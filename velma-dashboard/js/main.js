@@ -45,22 +45,25 @@
     stage.appendChild(msg);
   }
 
+  V.palette.restore();
+
   var topStats = P.buildTopStats(document.getElementById("top-stats"));
   P.buildVisualConfig(document.getElementById("visual-config-list"));
   P.buildBlendLegend(document.getElementById("blend-legend"));
   var modeListNodes = P.buildModeList(document.getElementById("mode-list"));
 
+  var pal0 = V.paletteColors;
   var weightBars = P.buildBarRows(document.getElementById("weight-rows"), [
-    { key: "green", label: "GREEN (BASE)", color: "#39ff8e" },
-    { key: "pink", label: "PINK (CREATIVE)", color: "#ff3df0" },
-    { key: "blue", label: "BLUE (LOGIC)", color: "#2f9bff" },
+    { key: "green", label: "BASE", color: pal0.dye.green },
+    { key: "pink", label: "CREATIVE", color: pal0.dye.pink },
+    { key: "blue", label: "LOGIC", color: pal0.dye.blue },
   ]);
 
   var driverBars = P.buildBarRows(document.getElementById("driver-rows"), [
-    { key: "cpu", label: "CPU LOAD", color: "#39ff8e" },
-    { key: "gpu", label: "GPU LOAD", color: "#35e0ff" },
+    { key: "cpu", label: "CPU LOAD", color: pal0.dye.green },
+    { key: "gpu", label: "GPU LOAD", color: pal0.cyan },
     { key: "workload", label: "WORKLOAD", color: "#b06bff" },
-    { key: "intensity", label: "COMBINED", color: "#ff3df0" },
+    { key: "intensity", label: "COMBINED", color: pal0.dye.pink },
   ]);
 
   var ring = document.getElementById("capability-ring");
@@ -127,6 +130,76 @@
     }
   });
 
+  /* ---------- core link (Tauri events or loopback WebSocket) ---------- */
+
+  var btnCore = document.getElementById("btn-core");
+  var params = new URLSearchParams(window.location.search);
+  var coreParam = params.get("core");
+  var coreUrl = "ws://127.0.0.1:8765/state";
+  if (coreParam) {
+    coreUrl = /^\d+$/.test(coreParam)
+      ? "ws://127.0.0.1:" + coreParam + "/state"
+      : coreParam;
+  }
+
+  V.bridge.onStatus(function (connected, wanted) {
+    btnCore.classList.toggle("active", connected);
+    btnCore.textContent = connected ? "Core Linked"
+      : wanted ? "Core: retrying" : "Core Link";
+  });
+
+  btnCore.addEventListener("click", function () {
+    if (V.bridge.wanted) {
+      V.bridge.disconnect();
+      btnCore.classList.remove("active");
+      btnCore.textContent = "Core Link";
+      return;
+    }
+    try {
+      V.bridge.connect(coreUrl);
+      btnCore.textContent = "Core: retrying";
+    } catch (err) {
+      btnCore.textContent = "Core: refused";
+    }
+  });
+
+  var usingTauri = V.bridge.initTauri();
+  if (!usingTauri && coreParam) { btnCore.click(); }
+
+  /* ---------- color vision palettes ---------- */
+
+  var paletteControls = document.getElementById("palette-controls");
+  Object.keys(V.palette.PALETTES).forEach(function (name) {
+    var b = document.createElement("button");
+    b.textContent = V.palette.PALETTES[name].label;
+    b.dataset.palette = name;
+    b.addEventListener("click", function () { V.palette.apply(name); });
+    paletteControls.appendChild(b);
+  });
+
+  function syncPalette(pal, name) {
+    if (orb) {
+      orb.setDyePalette([
+        V.palette.hexToRgb01(pal.dye.green),
+        V.palette.hexToRgb01(pal.dye.pink),
+        V.palette.hexToRgb01(pal.dye.blue),
+      ]);
+    }
+    [[weightBars.green, pal.dye.green], [weightBars.pink, pal.dye.pink],
+      [weightBars.blue, pal.dye.blue], [driverBars.cpu, pal.dye.green],
+      [driverBars.gpu, pal.cyan], [driverBars.intensity, pal.dye.pink]]
+      .forEach(function (pair) {
+        pair[0].fill.style.background = pair[1];
+        pair[0].fill.style.boxShadow = "0 0 6px " + pair[1];
+      });
+    P.buildBlendLegend(document.getElementById("blend-legend"));
+    paletteControls.querySelectorAll("button").forEach(function (b) {
+      b.classList.toggle("active", b.dataset.palette === name);
+    });
+    render(V.state.snapshot);
+  }
+  V.palette.onChange(syncPalette);
+
   /* ---------- render on snapshot change ---------- */
 
   var stateLabel = document.getElementById("state-label");
@@ -188,6 +261,7 @@
 
   V.state.onChange(render);
   render(V.state.snapshot);
+  syncPalette(V.paletteColors, V.palette.currentName());
 
   /* ---------- animation loop ---------- */
 

@@ -281,6 +281,8 @@ button {
 button:hover { background: rgba(0, 255, 170, 0.08); }
 button.active { border-color: var(--green); color: var(--green); box-shadow: 0 0 8px rgba(57, 255, 142, 0.3); }
 .mode-buttons, .quick-controls, .state-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+.palette-controls { margin-top: 6px; }
+.palette-controls button { font-size: 9px; padding: 3px 6px; }
 .state-buttons button { font-size: 9px; padding: 3px 6px; }
 
 /* ---------- scrollbars ---------- */
