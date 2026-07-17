@@ -29,6 +29,7 @@
     "uniform float u_particleAmt;",  // inward particle density 0..1
     "uniform float u_dim;",          // global dimmer (offline/failure)
     "uniform float u_octaves;",      // fbm octave budget (perf scaling)
+    "uniform float u_audio;",        // live voice/TTS envelope 0..1
     "uniform vec3  u_dyeG;",         // dye role: base (default neon green)
     "uniform vec3  u_dyeP;",         // dye role: creative (default neon pink)
     "uniform vec3  u_dyeB;",         // dye role: logic (default neon blue)
@@ -60,7 +61,7 @@
     "  float t = u_time;",
     "",
     "  float breath = 0.5 + 0.5 * sin(t * u_pulseSpeed);",
-    "  float orbR = 0.58 + 0.025 * breath + 0.02 * u_intensity;",
+    "  float orbR = 0.58 + 0.025 * breath + 0.02 * u_intensity + 0.03 * u_audio;",
     "",
     "  // ---- internal tie-dye field ----",
     "  float swirl = (1.0 - smoothstep(0.0, orbR, r)) * (2.2 + 3.5 * u_turbulence);",
@@ -92,7 +93,8 @@
     "  float body = 1.0 - smoothstep(orbR - 0.05, orbR, r);",
     "  float rim = smoothstep(orbR - 0.09, orbR, r) * (1.0 - smoothstep(orbR, orbR + 0.09, r));",
     "  vec3 rimBase = mix(dye, u_accent, u_accentAmt);",
-    "  vec3 rimCol = rimBase * rim * (1.6 + 2.4 * u_intensity) * (0.7 + 0.45 * breath);",
+    "  vec3 rimCol = rimBase * rim * (1.6 + 2.4 * u_intensity + 2.0 * u_audio)",
+    "              * (0.7 + 0.45 * breath);",
     "",
     "  // ---- outer halo ----",
     "  float halo = exp(-max(r - orbR, 0.0) * 5.5) * (0.16 + 0.30 * u_intensity);",
@@ -167,7 +169,8 @@
     this.u = {};
     var names = ["u_res", "u_time", "u_weights", "u_intensity", "u_energy",
       "u_turbulence", "u_flowSpeed", "u_pulseSpeed", "u_accent", "u_accentAmt",
-      "u_particleAmt", "u_dim", "u_octaves", "u_dyeG", "u_dyeP", "u_dyeB"];
+      "u_particleAmt", "u_dim", "u_octaves", "u_audio",
+      "u_dyeG", "u_dyeP", "u_dyeB"];
     for (var i = 0; i < names.length; i++) {
       this.u[names[i]] = gl.getUniformLocation(prog, names[i]);
     }
@@ -195,6 +198,10 @@
     this.paused = false;
     this.reducedMotion = false;
     this.timeScale = 1.0;
+
+    // Live voice/TTS envelope, set each frame by the main loop. Bypasses
+    // the slow target smoothing so the orb tracks speech in real time.
+    this.audioLevel = 0;
 
     this._t = 0;
     this._last = performance.now();
@@ -282,6 +289,7 @@
     gl.uniform1f(u.u_particleAmt, this.reducedMotion ? 0.0 : c.particleAmt);
     gl.uniform1f(u.u_dim, c.dim);
     gl.uniform1f(u.u_octaves, this.octaves);
+    gl.uniform1f(u.u_audio, this.reducedMotion ? 0.0 : this.audioLevel);
     gl.uniform3f(u.u_dyeG, this.dye[0][0], this.dye[0][1], this.dye[0][2]);
     gl.uniform3f(u.u_dyeP, this.dye[1][0], this.dye[1][1], this.dye[1][2]);
     gl.uniform3f(u.u_dyeB, this.dye[2][0], this.dye[2][1], this.dye[2][2]);

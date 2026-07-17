@@ -77,6 +77,14 @@ host-validation work, per the project's "not yet proven" list.
   and status colors together. Every status also has a text label, so color
   is never the only channel. Palette values are initial and should be
   validated with CVD simulators.
+- **Voice sync** — the orb has a live audio channel (radius, rim glow)
+  fed by whichever is louder: Core's `activity.audio_level` envelope
+  (e.g. for TTS lip-sync) or an opt-in local microphone analyser behind
+  the "Voice Sync" button. The mic is off by default, started only by an
+  explicit click, reduced in-page to a single RMS loudness number, never
+  recorded or transmitted, and fully released on stop. Reduced Motion
+  zeroes the audio channel. Final tuning against VELMA's real voice
+  output remains host work.
 - **Security** — the page itself performs no network fetches; the only
   network path is the opt-in Core link below, which is restricted to
   loopback (`127.0.0.1` / `localhost` / `[::1]`) WebSocket URLs and
@@ -125,6 +133,7 @@ Invalid states/enums are rejected; unknown fields ignored; numbers clamped.
 | `ui/js/palette.js` | Color vision palettes (default / deutan / tritan) |
 | `ui/js/state.js` | Snapshot store, validation, opt-in SIMULATED demo feed |
 | `ui/js/bridge.js` | Core link: Tauri v2 events + loopback-only WebSocket |
+| `ui/js/audio.js` | Voice sync: opt-in mic analyser (RMS only, never recorded) |
 | `ui/js/orb.js` | WebGL orb renderer (tie-dye shader, particles, perf scaling) |
 | `ui/js/gauges.js` | Canvas 2D automotive-style gauges |
 | `ui/js/panels.js` | DOM panel builders (no innerHTML) |
@@ -136,5 +145,5 @@ Invalid states/enums are rejected; unknown fields ignored; numbers clamped.
 ## Not yet proven (host-validation work)
 
 Native Tauri packaging/build of the GUI layer, final animation timings,
-exact state-color mapping, sound reaction, voice synchronization, and
-target-PC GPU/Game Mode budgets.
+exact state-color mapping, voice-sync tuning against VELMA's real speech
+output, and target-PC GPU/Game Mode budgets.

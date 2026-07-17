@@ -43,6 +43,7 @@
         flow_speed: 1.0,
         turbulence: 0.4,
         energy: 0.2,
+        audio_level: 0.0, // voice/TTS envelope pushed by Core (0..1)
       },
       // Telemetry rule: all null until real data arrives. Never fabricated.
       telemetry: {
@@ -107,6 +108,7 @@
         if (a.intensity  != null) { s.activity.intensity  = clamp01(a.intensity); }
         if (a.energy     != null) { s.activity.energy     = clamp01(a.energy); }
         if (a.turbulence != null) { s.activity.turbulence = clamp01(a.turbulence); }
+        if (a.audio_level != null) { s.activity.audio_level = clamp01(a.audio_level); }
         if (a.flow_speed != null) {
           var f = Number(a.flow_speed);
           if (isFinite(f)) { s.activity.flow_speed = Math.min(4, Math.max(0, f)); }

@@ -130,6 +130,25 @@
     }
   });
 
+  /* ---------- voice sync (opt-in local microphone analyser) ---------- */
+
+  var btnVoice = document.getElementById("btn-voice");
+  btnVoice.addEventListener("click", function () {
+    if (V.audio.running) {
+      V.audio.stop();
+      btnVoice.classList.remove("active");
+      btnVoice.textContent = "Voice Sync";
+      return;
+    }
+    btnVoice.textContent = "Voice: asking";
+    V.audio.start().then(function () {
+      btnVoice.classList.add("active");
+      btnVoice.textContent = "Voice Synced";
+    }).catch(function () {
+      btnVoice.textContent = "Voice: denied";
+    });
+  });
+
   /* ---------- core link (Tauri events or loopback WebSocket) ---------- */
 
   var btnCore = document.getElementById("btn-core");
@@ -286,7 +305,12 @@
   var lastHud = 0;
 
   function loop(now) {
-    if (orb) { orb.frame(now); }
+    if (orb) {
+      // audio channel: whichever is louder, Core's envelope or the mic
+      orb.audioLevel = Math.max(
+        V.state.snapshot.activity.audio_level, V.audio.level);
+      orb.frame(now);
+    }
 
     var dt = Math.min((now - lastGaugeDraw) / 1000, 0.1);
     lastGaugeDraw = now;
