@@ -37,7 +37,7 @@
       state: "offline",
       mode: "work",
       trust: { level: "unknown", reason: "No verification data received yet." },
-      weights: { green: 0.34, pink: 0.33, blue: 0.33 },
+      weights: { green: 0.34, pink: 0.33, blue: 0.33, purple: 0.3 },
       activity: {
         intensity: 0.0,
         flow_speed: 1.0,
@@ -102,6 +102,9 @@
         s.weights.green = 0.15 + 0.85 * clamp01(raw.weights.green);
         s.weights.pink  = 0.15 + 0.85 * clamp01(raw.weights.pink);
         s.weights.blue  = 0.15 + 0.85 * clamp01(raw.weights.blue);
+        if (raw.weights.purple != null) {
+          s.weights.purple = 0.15 + 0.85 * clamp01(raw.weights.purple);
+        }
       }
       if (raw.activity && typeof raw.activity === "object") {
         var a = raw.activity;
@@ -214,6 +217,7 @@
           green: 0.35 + 0.3 * wave(37, 0),
           pink: 0.4 + 0.35 * wave(23, 2),
           blue: 0.45 + 0.4 * wave(31, 4),
+          purple: 0.3 + 0.3 * wave(43, 1),
         },
         activity: {
           intensity: 0.45 + 0.35 * wave(17, 1),

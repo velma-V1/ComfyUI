@@ -13,21 +13,21 @@
   var PALETTES = {
     default: {
       label: "DEFAULT",
-      dye: { green: "#39ff8e", pink: "#ff3df0", blue: "#2f9bff" },
+      dye: { green: "#39ff8e", pink: "#ff3df0", blue: "#2f9bff", purple: "#a854ff" },
       ok: "#39ff8e", warn: "#ffb02e", bad: "#ff4d5e",
       cyan: "#35e0ff", needle: "#ff3df0",
     },
     // Deuteranopia/protanopia-friendly: blue-yellow axis carries meaning.
     deutan: {
       label: "DEUTAN",
-      dye: { green: "#ffd23e", pink: "#ff3df0", blue: "#2f9bff" },
+      dye: { green: "#ffd23e", pink: "#ff3df0", blue: "#2f9bff", purple: "#c78bff" },
       ok: "#4da6ff", warn: "#ffd23e", bad: "#ffffff",
       cyan: "#9ecbff", needle: "#ffd23e",
     },
     // Tritanopia-friendly: red-green axis carries meaning.
     tritan: {
       label: "TRITAN",
-      dye: { green: "#2bef7c", pink: "#ff5a6e", blue: "#e8f6ff" },
+      dye: { green: "#2bef7c", pink: "#ff5a6e", blue: "#e8f6ff", purple: "#d98cff" },
       ok: "#2bef7c", warn: "#ff9d6e", bad: "#ff3347",
       cyan: "#bfe9d9", needle: "#ff5a6e",
     },
@@ -50,6 +50,7 @@
     root.setProperty("--green", p.dye.green);
     root.setProperty("--pink", p.dye.pink);
     root.setProperty("--blue", p.dye.blue);
+    root.setProperty("--purple", p.dye.purple);
     root.setProperty("--amber", p.warn);
     root.setProperty("--red", p.bad);
     root.setProperty("--cyan", p.cyan);

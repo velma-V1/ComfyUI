@@ -38,11 +38,10 @@
   try {
     orb = new V.Orb(canvas);
   } catch (err) {
-    var stage = document.getElementById("orb-stage");
     var msg = document.createElement("div");
     msg.textContent = "WebGL unavailable: " + err.message;
-    msg.style.cssText = "position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#ff4d5e;";
-    stage.appendChild(msg);
+    msg.style.cssText = "position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#ff4d5e;z-index:1;";
+    document.body.appendChild(msg);
   }
 
   V.palette.restore();
@@ -57,6 +56,7 @@
     { key: "green", label: "BASE", color: pal0.dye.green },
     { key: "pink", label: "CREATIVE", color: pal0.dye.pink },
     { key: "blue", label: "LOGIC", color: pal0.dye.blue },
+    { key: "purple", label: "DEPTH", color: pal0.dye.purple },
   ]);
 
   var driverBars = P.buildBarRows(document.getElementById("driver-rows"), [
@@ -217,10 +217,12 @@
         V.palette.hexToRgb01(pal.dye.green),
         V.palette.hexToRgb01(pal.dye.pink),
         V.palette.hexToRgb01(pal.dye.blue),
+        V.palette.hexToRgb01(pal.dye.purple),
       ]);
     }
     [[weightBars.green, pal.dye.green], [weightBars.pink, pal.dye.pink],
-      [weightBars.blue, pal.dye.blue], [driverBars.cpu, pal.dye.green],
+      [weightBars.blue, pal.dye.blue], [weightBars.purple, pal.dye.purple],
+      [driverBars.cpu, pal.dye.green],
       [driverBars.gpu, pal.cyan], [driverBars.intensity, pal.dye.pink]]
       .forEach(function (pair) {
         pair[0].fill.style.background = pair[1];
@@ -267,6 +269,7 @@
     P.setBar(weightBars.green, snap.weights.green);
     P.setBar(weightBars.pink, snap.weights.pink);
     P.setBar(weightBars.blue, snap.weights.blue);
+    P.setBar(weightBars.purple, snap.weights.purple);
 
     var tel = snap.telemetry;
     P.setBar(driverBars.cpu, tel.cpu == null ? null : tel.cpu / 100,
@@ -296,6 +299,7 @@
   V.state.onChange(render);
   render(V.state.snapshot);
   syncPalette(V.paletteColors, V.palette.currentName());
+  V.windows.init();
 
   /* ---------- animation loop ---------- */
 
@@ -304,6 +308,25 @@
   var lastGaugeDraw = performance.now();
   var lastHud = 0;
 
+  /* Capability orbs float in slow orbits around the main orb. Each orb
+     gets its own angular speed and a gentle radial wobble; reduced motion
+     freezes the orbit at the base positions. */
+  var capCount = V.state.snapshot.capabilities.length;
+  function orbitCapabilities(now) {
+    var w = window.innerWidth, h = window.innerHeight;
+    var cx = w / 2, cy = h / 2;
+    var R = Math.min(w, h) * 0.36;
+    var t = reducedMotion ? 0 : now / 1000;
+    Object.keys(capNodes).forEach(function (id) {
+      var c = capNodes[id];
+      var speed = 0.05 + (c.index % 3) * 0.018;
+      var a = (c.index / capCount) * Math.PI * 2 + t * speed;
+      var wob = 1 + 0.05 * Math.sin(t * 0.7 + c.index * 2.1);
+      c.node.style.left = (cx + Math.cos(a) * R * wob) + "px";
+      c.node.style.top = (cy + Math.sin(a) * R * 0.92 * wob) + "px";
+    });
+  }
+
   function loop(now) {
     if (orb) {
       // audio channel: whichever is louder, Core's envelope or the mic
@@ -311,6 +334,7 @@
         V.state.snapshot.activity.audio_level, V.audio.level);
       orb.frame(now);
     }
+    orbitCapabilities(now);
 
     var dt = Math.min((now - lastGaugeDraw) / 1000, 0.1);
     lastGaugeDraw = now;
@@ -321,13 +345,8 @@
       fpsNode.textContent = orb ? String(orb.fps) : "--";
       P.updateTopStats(topStats, V.state.snapshot, orb ? orb.fps : 0,
         (now - bootTime) / 1000);
-      P.layoutCapabilityRing(capNodes, ring, V.state.snapshot.capabilities.length);
     }
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
-
-  window.addEventListener("resize", function () {
-    P.layoutCapabilityRing(capNodes, ring, V.state.snapshot.capabilities.length);
-  });
 })();

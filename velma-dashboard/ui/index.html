@@ -9,6 +9,9 @@
 </head>
 <body data-mode="work" data-state="offline">
 
+  <canvas id="orb-canvas"></canvas>
+  <div id="capability-ring" class="capability-ring" aria-label="Capability orbs"></div>
+
   <header class="top-bar" id="top-bar">
     <div class="brand">
       <span class="brand-name">VELMA</span>
@@ -17,69 +20,57 @@
     <div class="top-stats" id="top-stats"></div>
   </header>
 
-  <main class="grid">
+  <div class="orb-readout" id="orb-readout">
+    <span class="state-label" id="state-label">OFFLINE</span>
+    <span class="trust-chip" id="trust-chip" data-trust="unknown">TRUST: UNKNOWN</span>
+  </div>
 
-    <aside class="col col-left">
-      <section class="panel" id="panel-visual-config">
-        <h2>1. Visual Style Config</h2>
-        <ul class="kv-list" id="visual-config-list"></ul>
-      </section>
-      <section class="panel" id="panel-modes">
-        <h2>2. Mode List (Workflow)</h2>
-        <ul class="mode-list" id="mode-list"></ul>
-      </section>
-      <section class="panel" id="panel-blend">
-        <h2>3. Blended State System</h2>
-        <p class="hint">Multiple modes mix together, creating tiedye visuals.</p>
-        <ul class="legend" id="blend-legend"></ul>
-      </section>
-      <section class="panel" id="panel-approvals">
-        <h2>Approval Queue</h2>
-        <div id="approval-list" class="approval-list"></div>
-      </section>
-    </aside>
+  <div id="desk">
 
-    <section class="center">
-      <div class="orb-stage" id="orb-stage">
-        <canvas id="orb-canvas"></canvas>
-        <div id="capability-ring" class="capability-ring" aria-label="Capability orbs"></div>
-        <div class="orb-readout" id="orb-readout">
-          <span class="state-label" id="state-label">OFFLINE</span>
-          <span class="trust-chip" id="trust-chip" data-trust="unknown">TRUST: UNKNOWN</span>
-        </div>
-      </div>
-      <section class="panel wide" id="panel-gauges">
-        <h2>Resource Gauges <span class="src-tag" id="telemetry-src">NO TELEMETRY</span></h2>
-        <div class="gauge-row" id="gauge-row"></div>
-      </section>
+    <section class="panel" id="panel-visual-config">
+      <h2>Visual Style Config</h2>
+      <ul class="kv-list" id="visual-config-list"></ul>
+    </section>
+    <section class="panel" id="panel-modes">
+      <h2>Mode List</h2>
+      <ul class="mode-list" id="mode-list"></ul>
+    </section>
+    <section class="panel" id="panel-blend">
+      <h2>Blended State</h2>
+      <p class="hint">Modes mix together, creating tiedye visuals.</p>
+      <ul class="legend" id="blend-legend"></ul>
+    </section>
+    <section class="panel" id="panel-approvals">
+      <h2>Approval Queue</h2>
+      <div id="approval-list" class="approval-list"></div>
     </section>
 
-    <aside class="col col-right">
-      <section class="panel" id="panel-weights">
-        <h2>4. State Weight Monitor</h2>
-        <div id="weight-rows"></div>
-      </section>
-      <section class="panel" id="panel-drivers">
-        <h2>5. Intensity Drivers</h2>
-        <div id="driver-rows"></div>
-      </section>
-      <section class="panel" id="panel-trust">
-        <h2>Trust / Verification</h2>
-        <div id="trust-detail" class="trust-detail"></div>
-      </section>
-      <section class="panel" id="panel-capabilities">
-        <h2>Capability Panel</h2>
-        <ul id="capability-list" class="cap-list"></ul>
-      </section>
-      <section class="panel" id="panel-packet">
-        <h2>6. Real Time State Packet</h2>
-        <pre id="state-packet" class="packet"></pre>
-      </section>
-    </aside>
+    <section class="panel" id="panel-weights">
+      <h2>State Weight Monitor</h2>
+      <div id="weight-rows"></div>
+    </section>
+    <section class="panel" id="panel-drivers">
+      <h2>Intensity Drivers</h2>
+      <div id="driver-rows"></div>
+    </section>
+    <section class="panel" id="panel-trust">
+      <h2>Trust / Verification</h2>
+      <div id="trust-detail" class="trust-detail"></div>
+    </section>
+    <section class="panel" id="panel-capabilities">
+      <h2>Capability Panel</h2>
+      <ul id="capability-list" class="cap-list"></ul>
+    </section>
+    <section class="panel" id="panel-packet">
+      <h2>State Packet</h2>
+      <pre id="state-packet" class="packet"></pre>
+    </section>
 
-  </main>
+    <section class="panel wide" id="panel-gauges">
+      <h2>Resource Gauges <span class="src-tag" id="telemetry-src">NO TELEMETRY</span></h2>
+      <div class="gauge-row" id="gauge-row"></div>
+    </section>
 
-  <footer class="bottom-bar">
     <section class="panel" id="panel-sysmode">
       <h2>System Mode</h2>
       <div class="sysmode-value" id="sysmode-value">WORK MODE</div>
@@ -113,7 +104,8 @@
       </div>
       <div class="quick-controls palette-controls" id="palette-controls" aria-label="Color vision palette"></div>
     </section>
-  </footer>
+
+  </div>
 
   <script src="js/palette.js"></script>
   <script src="js/state.js"></script>
@@ -122,6 +114,7 @@
   <script src="js/orb.js"></script>
   <script src="js/gauges.js"></script>
   <script src="js/panels.js"></script>
+  <script src="js/windows.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

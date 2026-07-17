@@ -91,6 +91,7 @@
       [dye.green, "BASE INTELLIGENCE"],
       [dye.pink, "CREATIVE / GENERATION"],
       [dye.blue, "LOGIC / REASONING"],
+      [dye.purple, "DEPTH / MEMORY"],
     ].forEach(function (pair) {
       var li = el("li");
       var sw = el("span", "swatch");
@@ -202,17 +203,6 @@
     return nodes;
   }
 
-  function layoutCapabilityRing(nodes, ringNode, count) {
-    var w = ringNode.clientWidth, h = ringNode.clientHeight;
-    var R = Math.min(w, h) * 0.44;
-    Object.keys(nodes).forEach(function (id) {
-      var c = nodes[id];
-      var a = (c.index / count) * Math.PI * 2 - Math.PI / 2;
-      c.node.style.left = (w / 2 + Math.cos(a) * R) + "px";
-      c.node.style.top = (h / 2 + Math.sin(a) * R) + "px";
-    });
-  }
-
   function updateCapabilityRing(nodes, caps) {
     caps.forEach(function (cap) {
       var c = nodes[cap.id];
@@ -292,6 +282,7 @@
         green: +snap.weights.green.toFixed(2),
         pink: +snap.weights.pink.toFixed(2),
         blue: +snap.weights.blue.toFixed(2),
+        purple: +snap.weights.purple.toFixed(2),
       },
       intensity: +snap.activity.intensity.toFixed(2),
       flow_speed: +snap.activity.flow_speed.toFixed(2),
@@ -315,7 +306,6 @@
     setBar: setBar,
     updateTrust: updateTrust,
     buildCapabilityRing: buildCapabilityRing,
-    layoutCapabilityRing: layoutCapabilityRing,
     updateCapabilityRing: updateCapabilityRing,
     updateCapabilityList: updateCapabilityList,
     updateApprovals: updateApprovals,
