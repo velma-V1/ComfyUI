@@ -308,22 +308,39 @@
   var lastGaugeDraw = performance.now();
   var lastHud = 0;
 
-  /* Capability orbs float in slow orbits around the main orb. Each orb
-     gets its own angular speed and a gentle radial wobble; reduced motion
-     freezes the orbit at the base positions. */
+  /* Capability orbs orbit the main orb like a small solar system: each
+     one rides its own tilted elliptical plane at its own rate, and gets
+     depth — it grows, brightens, and sharpens swinging in front, then
+     shrinks, dims, and blurs passing behind. Reduced motion freezes the
+     orbits at their base positions. */
   var capCount = V.state.snapshot.capabilities.length;
   function orbitCapabilities(now) {
     var w = window.innerWidth, h = window.innerHeight;
     var cx = w / 2, cy = h / 2;
-    var R = Math.min(w, h) * 0.36;
+    var base = Math.min(w, h);
     var t = reducedMotion ? 0 : now / 1000;
     Object.keys(capNodes).forEach(function (id) {
       var c = capNodes[id];
-      var speed = 0.05 + (c.index % 3) * 0.018;
-      var a = (c.index / capCount) * Math.PI * 2 + t * speed;
-      var wob = 1 + 0.05 * Math.sin(t * 0.7 + c.index * 2.1);
-      c.node.style.left = (cx + Math.cos(a) * R * wob) + "px";
-      c.node.style.top = (cy + Math.sin(a) * R * 0.92 * wob) + "px";
+      var i = c.index;
+      var Rx = base * (0.30 + 0.05 * (i % 3));
+      var Ry = Rx * (0.28 + 0.07 * (i % 2));
+      var tilt = i * 0.85;
+      var speed = 0.12 + 0.035 * (i % 4);
+      var a = (i / capCount) * Math.PI * 2 + t * speed;
+      var lx = Math.cos(a) * Rx, ly = Math.sin(a) * Ry;
+      var x = cx + lx * Math.cos(tilt) - ly * Math.sin(tilt);
+      var y = cy + lx * Math.sin(tilt) + ly * Math.cos(tilt);
+      var depth = Math.sin(a);           // -1 behind .. +1 in front
+      var df = 0.5 + 0.5 * depth;
+      var scale = 0.65 + 0.5 * df;
+      var vis = c.vis == null ? 0.55 : c.vis;
+      c.node.style.left = x + "px";
+      c.node.style.top = y + "px";
+      c.node.style.transform =
+        "translate(-50%, -50%) scale(" + scale.toFixed(3) + ")";
+      c.node.style.opacity = (vis * (0.45 + 0.55 * df)).toFixed(3);
+      c.node.style.zIndex = depth > 0 ? "6" : "3";
+      c.node.style.filter = depth > 0 ? "" : "blur(0.7px) saturate(0.75)";
     });
   }
 

@@ -194,25 +194,29 @@
   function buildCapabilityRing(ringNode, caps) {
     var nodes = {};
     caps.forEach(function (cap, i) {
-      var orb = el("div", "cap-orb", cap.label);
-      orb.style.borderColor = cap.color;
+      var orb = el("div", "cap-orb");
+      orb.style.setProperty("--c", cap.color);
       orb.title = cap.id;
+      orb.appendChild(el("span", "cap-tag", cap.label));
       ringNode.appendChild(orb);
-      nodes[cap.id] = { node: orb, index: i, color: cap.color };
+      nodes[cap.id] = { node: orb, index: i, color: cap.color, vis: 0.55 };
     });
     return nodes;
   }
 
+  /* Status maps to a visibility factor consumed by the orbit animator,
+     which also folds in depth (front/back of the orbital plane). */
   function updateCapabilityRing(nodes, caps) {
     caps.forEach(function (cap) {
       var c = nodes[cap.id];
       if (!c) { return; }
-      var active = cap.status === "active";
-      c.node.classList.toggle("active", active);
+      c.node.classList.toggle("active", cap.status === "active");
       c.node.classList.toggle("blocked", cap.status === "blocked");
-      c.node.style.boxShadow = active ? "0 0 16px " + c.color : "none";
-      c.node.style.opacity = "";
-      if (cap.status === "disabled") { c.node.style.opacity = "0.18"; }
+      c.vis = cap.status === "active" ? 1.0
+        : cap.status === "awaiting" ? 0.8
+        : cap.status === "available" ? 0.55
+        : cap.status === "blocked" ? 0.5
+        : 0.15;
     });
   }
 

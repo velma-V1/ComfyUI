@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VELMA Orb Lab — 5 Concepts</title>
+<title>VELMA Orb Lab — Ion Storm B1–B5</title>
 <style>
 :root {
   --bg: #060309;
@@ -73,16 +73,14 @@ h1 {
 </style>
 </head>
 <body>
-<h1>VELMA ORB LAB</h1>
-<div class="sub">Five orb concepts — layered depth · flowing plasma · flaring core. Click a tile to view fullscreen, click again to shrink. The core's light waxes, bursts, and fades on its own cycle in every concept.</div>
+<h1>VELMA ORB LAB — ION STORM</h1>
+<div class="sub">Five Ion Storm builds. In every one the colored filaments themselves move — they writhe, reconnect, and flow as living currents — and where two colors cross, the lines flash hot. The core waxes, bursts, and fades with activity. Click a tile for fullscreen.</div>
 <div class="grid" id="grid"></div>
-<div class="hint-bar">All five run the permanent identity: green / pink / blue + purple. Pick a letter (A–E) — the winner becomes the dashboard orb.</div>
+<div class="hint-bar">Permanent identity: green / pink / blue + purple. Pick one (B1–B5) — the winner becomes the dashboard orb.</div>
 
 <script>
 (function () {
 "use strict";
-
-/* ---------- shared GL boilerplate ---------- */
 
 var VERT = "attribute vec2 a_pos; void main(){ gl_Position = vec4(a_pos,0.,1.); }";
 
@@ -102,11 +100,26 @@ var PRE = [
 "  for(int i=0;i<4;i++){ v+=a*noise(p); p=p*2.03+vec2(11.3,7.7); a*=0.5; } return v; }",
 "float ridge(float n, float s){ return pow(max(0., 1.-abs(2.*n-1.)*s), 6.0); }",
 "vec2 rot2(vec2 p, float a){ float c=cos(a); float s=sin(a); return vec2(c*p.x-s*p.y, s*p.x+c*p.y); }",
-"// core flare envelope: waxes and wanes, rare bursts, grows with energy",
+"// living filament field: time runs INSIDE the domain warp, so the",
+"// ridge lines writhe, split, and reconnect instead of just sliding",
+"float fil(vec2 q, float t, float seed, float writhe){",
+"  vec2 w = vec2(fbm(q*0.85+vec2(t*0.14, seed)),",
+"                fbm(q*0.85+vec2(seed+4.7, -t*0.11)));",
+"  return ridge(fbm(q+(w-0.5)*writhe), 2.6);",
+"}",
+"// hot flash where two colored currents cross",
+"float crossFlash(float a, float b){ return a*b; }",
 "float flareEnv(float t){",
 "  float slow = 0.5 + 0.5*sin(t*0.31);",
 "  float burst = pow(noise(vec2(t*0.28, 7.3)), 3.0);",
 "  return (0.10 + 0.30*slow + 1.6*burst) * (0.35 + 1.1*u_energy);",
+"}",
+"vec3 stormCloud(vec2 uv, float t){",
+"  vec2 qc=rot2(uv,t*0.03)*2.0+vec2(t*0.07,0.0);",
+"  float cloud=pow(fbm(qc+fbm(qc+t*0.04)*1.4),2.2);",
+"  float selc=fbm(qc*0.5+3.0);",
+"  vec3 dye=mix(mix(V,B,smoothstep(0.3,0.5,selc)),mix(P,G,smoothstep(0.55,0.75,selc)),smoothstep(0.45,0.6,selc));",
+"  return dye*cloud*0.22;",
 "}",
 "vec3 post(vec3 col, float r){",
 "  col = col/(1.0+col*0.9);",
@@ -118,206 +131,127 @@ var PRE = [
 "}",
 ""].join("\n");
 
-/* ---------- A: NEBULA DEPTH — 3 parallax plasma layers ---------- */
-
-var FRAG_A = PRE + [
-"void main(){",
-"  vec2 uv=(gl_FragCoord.xy*2.0-u_res)/min(u_res.x,u_res.y);",
-"  float r=length(uv); float t=u_time;",
-"  float orbR=0.78;",
-"  float body=1.0-smoothstep(orbR-0.04,orbR,r);",
-"  vec3 col=vec3(0.0);",
-"  // three depth layers: back slow+dim, front fast+vivid, opposite drifts",
-"  for(int i=0;i<3;i++){",
-"    float fi=float(i);",
-"    float spd=0.03+fi*0.045;",
-"    float scl=1.6+fi*1.1;",
-"    float bri=0.22+fi*0.34;",
-"    vec2 q=rot2(uv,t*spd*(1.0-2.0*mod(fi,2.0)))*scl;",
-"    q+=vec2(t*0.05*(fi-1.0), -t*0.03);",
-"    float w1=fbm(q+t*0.06);",
-"    float plasma=pow(fbm(q+vec2(w1*1.8)),2.6)*2.2;",
-"    float sel=fbm(q*0.4+fi*17.0);",
-"    vec3 dye=mix(mix(G,P,smoothstep(0.30,0.45,sel)),",
-"                 mix(B,V,smoothstep(0.60,0.75,sel)),smoothstep(0.45,0.60,sel));",
-"    float a=clamp(plasma*bri,0.0,1.0);",
-"    col=col*(1.0-a*0.55)+dye*plasma*bri;",
-"  }",
-"  float fl=flareEnv(t);",
-"  float core=exp(-r*r*(80.0-45.0*clamp(fl,0.0,1.0)))*fl;",
-"  col+=mix(vec3(1.0,0.9,1.0),P,0.3)*core;",
-"  float ring=exp(-abs(r-orbR)*46.0);",
-"  col+=mix(P,V,0.5)*ring*0.4;",
-"  col*=body;",
-"  col+=mix(V,B,0.5)*exp(-max(r-orbR,0.0)*6.0)*0.05;",
-"  gl_FragColor=vec4(post(col,r),1.0);",
-"}"].join("\n");
-
-/* ---------- B: ION STORM — electric arc layers + storm cloud ---------- */
-
-var FRAG_B = PRE + [
-"void main(){",
-"  vec2 uv=(gl_FragCoord.xy*2.0-u_res)/min(u_res.x,u_res.y);",
-"  float r=length(uv); float t=u_time;",
-"  float orbR=0.78;",
-"  float body=1.0-smoothstep(orbR-0.04,orbR,r);",
-"  // back layer: rolling storm cloud, slow advection",
-"  vec2 qc=rot2(uv,t*0.03)*2.0+vec2(t*0.08,0.0);",
-"  float cloud=pow(fbm(qc+fbm(qc)*1.4),2.2);",
-"  float selc=fbm(qc*0.5+3.0);",
-"  vec3 cloudDye=mix(mix(V,B,smoothstep(0.3,0.5,selc)),mix(P,G,smoothstep(0.55,0.75,selc)),smoothstep(0.45,0.6,selc));",
-"  vec3 col=cloudDye*cloud*0.30;",
-"  // two arc layers: sharp electric filaments, flickering, faster",
-"  for(int i=0;i<2;i++){",
-"    float fi=float(i);",
-"    vec2 qa=rot2(uv,t*(0.06+fi*0.05)*(1.0-2.0*fi))*(2.6+fi*1.3);",
-"    qa+=vec2(0.0,t*(0.10+fi*0.08));",
-"    float arc=ridge(fbm(qa),2.6);",
-"    float flick=0.35+0.65*pow(noise(vec2(t*(1.5+fi),fi*9.0)),2.0);",
-"    float sel=fbm(qa*0.35+fi*23.0);",
-"    vec3 dye=mix(mix(G,B,smoothstep(0.3,0.5,sel)),mix(P,V,smoothstep(0.55,0.7,sel)),smoothstep(0.45,0.6,sel));",
-"    col+=dye*arc*flick*(0.8+fi*0.5);",
-"  }",
+var TAIL = [
 "  float fl=flareEnv(t);",
 "  float strobe=0.7+0.3*noise(vec2(t*2.2,3.7));",
 "  float core=exp(-r*r*(95.0-55.0*clamp(fl,0.0,1.0)))*fl*strobe;",
 "  col+=mix(vec3(1.0),B,0.25)*core;",
-"  float ring=exp(-abs(r-orbR)*46.0);",
-"  col+=mix(B,V,0.5)*ring*(0.3+0.3*fl);",
+"  float ringm=exp(-abs(r-orbR)*46.0);",
+"  col+=mix(B,V,0.5)*ringm*(0.3+0.3*fl);",
 "  col*=body;",
 "  gl_FragColor=vec4(post(col,r),1.0);",
 "}"].join("\n");
 
-/* ---------- C: LIQUID INK — billowing advected ink, 2 depths ---------- */
-
-var FRAG_C = PRE + [
+/* B1 — WRITHING ARCS: four currents, four directions, heavy writhe */
+var FRAG_B1 = PRE + [
 "void main(){",
 "  vec2 uv=(gl_FragCoord.xy*2.0-u_res)/min(u_res.x,u_res.y);",
 "  float r=length(uv); float t=u_time;",
 "  float orbR=0.78;",
 "  float body=1.0-smoothstep(orbR-0.04,orbR,r);",
-"  vec3 col=vec3(0.0);",
-"  for(int i=0;i<2;i++){",
-"    float fi=float(i);",
-"    float spd=0.06+fi*0.07;",
-"    vec2 p=rot2(uv,t*0.025*(1.0-2.0*fi))*(2.0+fi*0.9);",
-"    float w1=fbm(p+vec2(t*spd,0.0));",
-"    float w2=fbm(p*1.6-vec2(0.0,t*spd*0.8)+w1*2.0);",
-"    float ink=fbm(p+2.4*vec2(w1,w2)+vec2(0.0,t*spd*1.4));",
-"    float billow=pow(ink,2.4)*2.4;",
-"    vec3 dye=mix(mix(G,P,smoothstep(0.30,0.48,w1)),",
-"                 mix(B,V,smoothstep(0.55,0.72,w2)),smoothstep(0.42,0.60,ink));",
-"    float bri=0.35+fi*0.55;",
-"    float a=clamp(billow*bri*0.6,0.0,1.0);",
-"    col=col*(1.0-a*0.5)+dye*billow*bri;",
-"  }",
-"  float fl=flareEnv(t);",
-"  float core=exp(-r*r*(70.0-35.0*clamp(fl,0.0,1.0)))*fl*0.85;",
-"  col+=mix(vec3(1.0,0.92,1.0),V,0.35)*core;",
-"  float ring=exp(-abs(r-orbR)*46.0);",
-"  col+=mix(P,B,0.5)*ring*0.35;",
-"  col*=body;",
-"  gl_FragColor=vec4(post(col,r),1.0);",
-"}"].join("\n");
+"  vec3 col=stormCloud(uv,t);",
+"  float fg=fil(rot2(uv,t*0.05)*2.6+vec2(t*0.12,0.0),      t,1.3,2.4);",
+"  float fp=fil(rot2(uv,-t*0.06)*2.7+vec2(0.0,t*0.11),     t,4.2,2.4);",
+"  float fb=fil(rot2(uv,t*0.04)*2.5+vec2(-t*0.10,t*0.05),  t,7.9,2.4);",
+"  float fv=fil(rot2(uv,-t*0.05)*2.8+vec2(t*0.06,-t*0.09), t,11.6,2.4);",
+"  col+=G*fg*0.85+P*fp*0.85+B*fb*0.85+V*fv*0.7;",
+"  float inter=crossFlash(fg,fp)+crossFlash(fg,fb)+crossFlash(fg,fv)",
+"            +crossFlash(fp,fb)+crossFlash(fp,fv)+crossFlash(fb,fv);",
+"  col+=vec3(1.0,0.95,1.0)*inter*0.9;",
+] .join("\n") + "\n" + TAIL;
 
-/* ---------- D: RIBBON ORBITALS — front/back ribbon layers ---------- */
+/* B2 — CROSSING CURRENTS: opposed flows, strong collision flashes */
+var FRAG_B2 = PRE + [
+"void main(){",
+"  vec2 uv=(gl_FragCoord.xy*2.0-u_res)/min(u_res.x,u_res.y);",
+"  float r=length(uv); float t=u_time;",
+"  float orbR=0.78;",
+"  float body=1.0-smoothstep(orbR-0.04,orbR,r);",
+"  vec3 col=stormCloud(uv,t);",
+"  vec2 ru=uv/max(r,0.12);",
+"  float fg=fil(rot2(uv,t*0.11)*2.6,                t,1.3,2.0);",
+"  float fp=fil(rot2(uv,-t*0.10)*2.6,               t,4.2,2.0);",
+"  float fb=fil(uv*2.7+ru*t*0.16,                   t,7.9,2.0);",
+"  float fv=fil(uv*2.5-ru*t*0.13,                   t,11.6,2.0);",
+"  col+=G*fg*0.8+P*fp*0.8+B*fb*0.8+V*fv*0.65;",
+"  float inter=crossFlash(fg,fp)+crossFlash(fb,fv)",
+"            +0.6*(crossFlash(fg,fb)+crossFlash(fp,fv)+crossFlash(fg,fv)+crossFlash(fp,fb));",
+"  col+=vec3(1.0,0.95,1.0)*inter*1.3;",
+].join("\n") + "\n" + TAIL;
 
-var FRAG_D = PRE + [
-"float ribbon(float ang,float r,float t,float base,float wind,float ph,float wmul){",
-"  float wig=(noise(vec2(r*2.0+ph,ph*3.7))-0.5)*1.0;",
-"  float A=base+wind*r+wig+t*0.07*sin(ph);",
-"  float d=atan(sin(ang-A),cos(ang-A));",
-"  float w=(0.08+0.05*noise(vec2(r*3.0+ph,ph)))*wmul;",
-"  float lat=exp(-d*d/(w*w));",
-"  float pulse=0.30+0.70*noise(vec2(r*3.2-t*(0.9+0.5*fract(ph*0.37)),ph*9.1));",
-"  return lat*pulse*smoothstep(0.06,0.2,r);",
-"}",
+/* B3 — TESLA DISCHARGE: radial arcs core->rim, burst-synced */
+var FRAG_B3 = PRE + [
 "void main(){",
 "  vec2 uv=(gl_FragCoord.xy*2.0-u_res)/min(u_res.x,u_res.y);",
 "  float r=length(uv); float ang=atan(uv.y,uv.x); float t=u_time;",
 "  float orbR=0.78;",
 "  float body=1.0-smoothstep(orbR-0.04,orbR,r);",
-"  // back layer: dim wide ribbons, counter-rotating (depth)",
-"  float ab=ang+t*0.06;",
-"  vec3 back=G*ribbon(ab,r,t,0.5,1.4,11.3,2.2)*0.30",
-"          +B*ribbon(ab,r,t,2.6,-1.6,5.9,2.2)*0.30",
-"          +V*ribbon(ab,r,t,4.4,1.8,8.1,2.2)*0.30;",
-"  // front layer: vivid tight ribbons",
-"  float af=ang-t*0.10;",
-"  vec3 front=G*ribbon(af,r,t,0.0,2.3,1.3,1.0)",
-"           +P*ribbon(af,r,t,1.1,2.8,2.6,1.0)",
-"           +P*ribbon(af,r,t,4.0,-2.1,7.9,1.0)",
-"           +B*ribbon(af,r,t,2.2,1.8,5.5,1.0)",
-"           +V*ribbon(af,r,t,3.3,2.1,8.8,1.0);",
-"  vec2 wq=vec2(cos(af),sin(af))*(r*2.8+1.5);",
-"  float tex=0.8+0.6*ridge(fbm(wq*1.7),2.0);",
-"  vec3 col=back+front*tex*1.2;",
-"  float fl=flareEnv(t);",
-"  float core=exp(-r*r*(100.0-55.0*clamp(fl,0.0,1.0)))*fl;",
-"  col+=mix(vec3(1.0,0.9,1.0),P,0.35)*core;",
-"  float ring=exp(-abs(r-orbR)*46.0);",
-"  col+=mix(P,V,0.5)*ring*0.4;",
-"  col*=body;",
-"  gl_FragColor=vec4(post(col,r),1.0);",
-"}"].join("\n");
+"  vec3 col=stormCloud(uv,t);",
+"  vec2 av=vec2(cos(ang),sin(ang));",
+"  float flPre=flareEnv(t);",
+"  float surge=0.35+1.65*clamp(flPre,0.0,1.2);",
+"  float fg=fil(av*(r*3.4+2.2)+vec2(t*0.10,0.0), t,1.3,2.6);",
+"  float fp=fil(av*(r*3.1+2.0)*1.13+vec2(0.0,t*0.09), t,4.2,2.6);",
+"  float fb=fil(av*(r*3.6+2.4)*0.91+vec2(-t*0.08,t*0.04), t,7.9,2.6);",
+"  float fv=fil(av*(r*3.2+2.1)*1.07+vec2(t*0.05,-t*0.07), t,11.6,2.6);",
+"  float reach=smoothstep(0.06,0.16,r);",
+"  col+=(G*fg*0.85+P*fp*0.85+B*fb*0.85+V*fv*0.7)*reach*surge;",
+"  float inter=crossFlash(fg,fp)+crossFlash(fg,fb)+crossFlash(fg,fv)",
+"            +crossFlash(fp,fb)+crossFlash(fp,fv)+crossFlash(fb,fv);",
+"  col+=vec3(1.0,0.95,1.0)*inter*reach*surge*0.8;",
+].join("\n") + "\n" + TAIL;
 
-/* ---------- E: SPECTER GLASS — shaded sphere, refracted layers ---------- */
-
-var FRAG_E = PRE + [
+/* B4 — MAGNETIC WEAVE: two braided counter-precessing layers */
+var FRAG_B4 = PRE + [
 "void main(){",
 "  vec2 uv=(gl_FragCoord.xy*2.0-u_res)/min(u_res.x,u_res.y);",
 "  float r=length(uv); float t=u_time;",
 "  float orbR=0.78;",
-"  float rr=clamp(r/orbR,0.0,1.0);",
-"  float z=sqrt(max(1.0-rr*rr,0.0));",
-"  vec3 n=vec3(uv/orbR,z);",
-"  float body=1.0-smoothstep(orbR-0.02,orbR,r);",
-"  vec3 col=vec3(0.0);",
-"  // three internal layers at different depths, refraction-offset by the",
-"  // sphere normal so they parallax against each other",
-"  for(int i=0;i<3;i++){",
-"    float fi=float(i);",
-"    float depth=0.25+fi*0.35;",
-"    vec2 q=uv-n.xy*depth*0.35;",
-"    q=rot2(q,t*(0.04+fi*0.05)*(1.0-2.0*mod(fi,2.0)))*(2.2+fi*0.9);",
-"    q+=vec2(t*0.06*(1.0-fi*0.7),0.0);",
-"    float w1=fbm(q+t*0.05);",
-"    float plasma=pow(fbm(q+w1*1.7),2.5)*2.0;",
-"    float sel=fbm(q*0.4+fi*13.0);",
-"    vec3 dye=mix(mix(G,B,smoothstep(0.3,0.5,sel)),mix(P,V,smoothstep(0.55,0.72,sel)),smoothstep(0.45,0.6,sel));",
-"    col+=dye*plasma*(0.34+fi*0.38)*(0.6+0.4*z);",
-"  }",
-"  float fl=flareEnv(t);",
-"  vec2 coreUv=uv-n.xy*0.18;",
-"  float cr=length(coreUv);",
-"  float core=exp(-cr*cr*(85.0-45.0*clamp(fl,0.0,1.0)))*fl;",
-"  col+=mix(vec3(1.0,0.92,1.0),V,0.3)*core;",
-"  // glass shell: fresnel rim + soft specular",
-"  float fres=pow(1.0-z,3.0);",
-"  col+=mix(B,V,0.5)*fres*0.55;",
-"  float spec=pow(max(dot(n,normalize(vec3(-0.5,0.6,0.6))),0.0),24.0);",
-"  col+=vec3(0.9,0.95,1.0)*spec*0.16;",
-"  col*=body;",
-"  col+=mix(V,B,0.5)*exp(-max(r-orbR,0.0)*7.0)*0.05;",
-"  gl_FragColor=vec4(post(col,r),1.0);",
-"}"].join("\n");
+"  float body=1.0-smoothstep(orbR-0.04,orbR,r);",
+"  vec3 col=stormCloud(uv,t);",
+"  vec2 q1=rot2(uv,t*0.08); q1=vec2(q1.x*1.6,q1.y*3.4)+vec2(t*0.10,0.0);",
+"  vec2 q2=rot2(uv,-t*0.07+1.3); q2=vec2(q2.x*1.6,q2.y*3.4)-vec2(t*0.09,0.0);",
+"  float fg=fil(q1, t,1.3,2.2);",
+"  float fb=fil(q1*1.21+5.0, t,7.9,2.2);",
+"  float fp=fil(q2, t,4.2,2.2);",
+"  float fv=fil(q2*1.17+9.0, t,11.6,2.2);",
+"  col+=G*fg*0.85+B*fb*0.8+P*fp*0.85+V*fv*0.7;",
+"  float inter=(fg+fb)*(fp+fv);",
+"  col+=vec3(1.0,0.95,1.0)*inter*0.7;",
+].join("\n") + "\n" + TAIL;
 
-/* ---------- variants ---------- */
+/* B5 — STORM VORTEX: differential rotation, colors shear and mix */
+var FRAG_B5 = PRE + [
+"void main(){",
+"  vec2 uv=(gl_FragCoord.xy*2.0-u_res)/min(u_res.x,u_res.y);",
+"  float r=length(uv); float t=u_time;",
+"  float orbR=0.78;",
+"  float body=1.0-smoothstep(orbR-0.04,orbR,r);",
+"  vec3 col=stormCloud(uv,t);",
+"  float vort=fbm(rot2(uv,t*0.05)*1.5+vec2(t*0.09,0.0));",
+"  vec2 shift=vec2(vort-0.5)*1.6;",
+"  float fg=fil(rot2(uv,t*0.055)*2.6+shift, t,1.3,2.2);",
+"  float fp=fil(rot2(uv,t*0.075)*2.6+shift, t,4.2,2.2);",
+"  float fb=fil(rot2(uv,t*0.095)*2.6+shift, t,7.9,2.2);",
+"  float fv=fil(rot2(uv,t*0.115)*2.6+shift, t,11.6,2.2);",
+"  col+=G*fg*0.85+P*fp*0.85+B*fb*0.85+V*fv*0.7;",
+"  float inter=crossFlash(fg,fp)+crossFlash(fg,fb)+crossFlash(fg,fv)",
+"            +crossFlash(fp,fb)+crossFlash(fp,fv)+crossFlash(fb,fv);",
+"  col+=vec3(1.0,0.95,1.0)*inter*0.9;",
+].join("\n") + "\n" + TAIL;
 
 var VARIANTS = [
-  { tag: "A", name: "Nebula Depth", frag: FRAG_A,
-    desc: "Three parallax plasma layers drifting at different speeds and directions — back layer deep and dim, front layer vivid. Core waxes and bursts." },
-  { tag: "B", name: "Ion Storm", frag: FRAG_B,
-    desc: "Rolling storm cloud behind two layers of flickering electric filaments. Core strobes and swells on discharge bursts." },
-  { tag: "C", name: "Liquid Ink", frag: FRAG_C,
-    desc: "Ink billowing through water: heavy domain-warped currents, two depths, colors bleeding into each other. Soft lantern core that breathes." },
-  { tag: "D", name: "Ribbon Orbitals", frag: FRAG_D,
-    desc: "Discrete color ribbons in two depth layers, counter-rotating for parallax; energy pulses race along each ribbon. Flaring core." },
-  { tag: "E", name: "Specter Glass", frag: FRAG_E,
-    desc: "A shaded glass sphere: three refracted plasma layers parallax inside, fresnel rim, soft specular. Core glows deep in the glass, waxing and waning." },
+  { tag: "B1", name: "Writhing Arcs", frag: FRAG_B1,
+    desc: "Four living currents, four drift directions. Every line writhes and reconnects; any two colors crossing flash white-hot." },
+  { tag: "B2", name: "Crossing Currents", frag: FRAG_B2,
+    desc: "Green and pink counter-rotate while blue flows inward and purple outward — head-on collisions everywhere, strongest interaction flashes." },
+  { tag: "B3", name: "Tesla Discharge", frag: FRAG_B3,
+    desc: "Arcs snake from the core out to the shell like continuous lightning. When the core surges, the whole cage of arcs surges with it." },
+  { tag: "B4", name: "Magnetic Weave", frag: FRAG_B4,
+    desc: "Two braided layers — green/blue precessing one way, pink/purple the other — long field-line filaments shearing through each other and sparking." },
+  { tag: "B5", name: "Storm Vortex", frag: FRAG_B5,
+    desc: "One shared vortex, but each color rotates at its own rate — colors continuously overtake, shear past, and blend into each other." },
 ];
-
-/* ---------- boot ---------- */
 
 function compile(gl, type, src) {
   var sh = gl.createShader(type);
@@ -403,8 +337,6 @@ function frame(now) {
       gl.useProgram(o.prog);
       gl.uniform2f(o.u_res, w, h);
       gl.uniform1f(o.u_time, t + o.idx * 13.7);
-      // demo energy: slow independent activity cycle per orb, so the core
-      // visibly grows busy and falls quiet
       var e = 0.2 + 0.8 * Math.pow(0.5 + 0.5 * Math.sin(t * 0.19 + o.idx * 2.1), 2.0);
       gl.uniform1f(o.u_energy, e);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
