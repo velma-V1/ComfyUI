@@ -4,18 +4,45 @@ Dependency-free HTML/CSS/JS + WebGL prototype of the VELMA control dashboard.
 The central Orb represents VELMA's real operating state; panels around it show
 telemetry, trust, capabilities, approvals, and project status.
 
-## Run
+## Run (browser)
 
-No build step, no dependencies. Serve the folder and open it:
+No build step, no dependencies. Serve the `ui/` folder and open it:
 
 ```bash
-cd velma-dashboard
+cd velma-dashboard/ui
 python3 -m http.server 8410
 # open http://localhost:8410
 ```
 
-(Opening `index.html` directly from disk also works in most browsers since
-all scripts are classic scripts, not modules.)
+(Opening `ui/index.html` directly from disk also works in most browsers
+since all scripts are classic scripts, not modules.)
+
+## Run (desktop shell, Tauri v2)
+
+`src-tauri/` contains the thin Rust shell: it relays snapshots from the
+local Core WebSocket (`VELMA_CORE_URL`, default `ws://127.0.0.1:8765/state`,
+loopback-only) to the webview as `velma://snapshot` events, provides a
+system tray (show/hide/quit), and a `set_always_on_top` command surfaced
+as an "Always On Top" button when the UI detects the shell.
+
+On a host with the Rust toolchain and the platform WebView dependencies
+(see the Tauri v2 prerequisites docs; on Linux: `webkit2gtk-4.1`, `gtk3`,
+etc.):
+
+```bash
+cargo install tauri-cli --version '^2'
+cd velma-dashboard/src-tauri
+cargo tauri dev      # or: cargo tauri build
+```
+
+Icons: `icons/icon.png` is checked in; run `cargo tauri icon icons/icon.png`
+on the host to generate the full platform set (`.ico`, `.icns`, sizes).
+
+**Validation status:** `src/core_link.rs` (the loopback guard and WS relay
+loop) is compile-checked and unit-tested. The GUI layer (`lib.rs`,
+`main.rs`, tray, window config) compiles only where the WebView toolchain
+exists and has NOT been built in this environment — treat it as
+host-validation work, per the project's "not yet proven" list.
 
 ## Design rules implemented
 
@@ -93,17 +120,21 @@ Invalid states/enums are rejected; unknown fields ignored; numbers clamped.
 
 | File | Purpose |
 | --- | --- |
-| `index.html` | Layout: header, left/right panels, orb stage, bottom bar |
-| `css/dashboard.css` | Dark neon theme, panels, grid |
-| `js/palette.js` | Color vision palettes (default / deutan / tritan) |
-| `js/state.js` | Snapshot store, validation, opt-in SIMULATED demo feed |
-| `js/bridge.js` | Core link: Tauri v2 events + loopback-only WebSocket |
-| `js/orb.js` | WebGL orb renderer (tie-dye shader, particles, perf scaling) |
-| `js/gauges.js` | Canvas 2D automotive-style gauges |
-| `js/panels.js` | DOM panel builders (no innerHTML) |
-| `js/main.js` | Wiring, state styles, mode profiles, controls, RAF loop |
+| `ui/index.html` | Layout: header, left/right panels, orb stage, bottom bar |
+| `ui/css/dashboard.css` | Dark neon theme, panels, grid |
+| `ui/js/palette.js` | Color vision palettes (default / deutan / tritan) |
+| `ui/js/state.js` | Snapshot store, validation, opt-in SIMULATED demo feed |
+| `ui/js/bridge.js` | Core link: Tauri v2 events + loopback-only WebSocket |
+| `ui/js/orb.js` | WebGL orb renderer (tie-dye shader, particles, perf scaling) |
+| `ui/js/gauges.js` | Canvas 2D automotive-style gauges |
+| `ui/js/panels.js` | DOM panel builders (no innerHTML) |
+| `ui/js/main.js` | Wiring, state styles, mode profiles, controls, RAF loop |
+| `src-tauri/src/core_link.rs` | Loopback-only WS relay (compile-checked + tested) |
+| `src-tauri/src/lib.rs` | Tauri glue: snapshot events, tray, always-on-top |
+| `src-tauri/tauri.conf.json` | Window, CSP, `frontendDist: ../ui`, bundle config |
 
 ## Not yet proven (host-validation work)
 
-Native Tauri packaging, final animation timings, exact state-color mapping,
-sound reaction, voice synchronization, and target-PC GPU/Game Mode budgets.
+Native Tauri packaging/build of the GUI layer, final animation timings,
+exact state-color mapping, sound reaction, voice synchronization, and
+target-PC GPU/Game Mode budgets.

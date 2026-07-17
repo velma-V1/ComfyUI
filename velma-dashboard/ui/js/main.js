@@ -166,6 +166,21 @@
   var usingTauri = V.bridge.initTauri();
   if (!usingTauri && coreParam) { btnCore.click(); }
 
+  /* Desktop-shell-only controls (Tauri exposes window.__TAURI__) */
+  if (usingTauri && window.__TAURI__.core &&
+      typeof window.__TAURI__.core.invoke === "function") {
+    var pinned = false;
+    var btnPin = document.createElement("button");
+    btnPin.textContent = "Always On Top";
+    btnPin.addEventListener("click", function () {
+      pinned = !pinned;
+      window.__TAURI__.core.invoke("set_always_on_top", { on: pinned })
+        .then(function () { btnPin.classList.toggle("active", pinned); })
+        .catch(function () { pinned = !pinned; });
+    });
+    btnCore.parentNode.appendChild(btnPin);
+  }
+
   /* ---------- color vision palettes ---------- */
 
   var paletteControls = document.getElementById("palette-controls");
