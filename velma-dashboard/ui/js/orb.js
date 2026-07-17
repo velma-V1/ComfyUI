@@ -29,8 +29,10 @@
     "uniform float u_intensity;",    // overall activity 0..1
     "uniform float u_energy;",       // strike rate/brightness 0..1
     "uniform float u_turbulence;",   // filament writhe 0..1
-    "uniform float u_flowSpeed;",    // current drift multiplier
-    "uniform float u_pulseSpeed;",   // core envelope rate",
+    "uniform float u_drift;",        // integrated flow phase (JS accumulates, no jerk)
+    "uniform float u_phase;",        // integrated breath phase (JS accumulates)
+    "uniform float u_corePhase;",    // integrated core-envelope phase (floored rate)
+    "uniform float u_particlePhase;",// integrated particle radial phase
     "uniform vec3  u_accent;",       // state accent (rim/particles only)
     "uniform float u_accentAmt;",
     "uniform float u_particleAmt;",
@@ -72,7 +74,7 @@
     "  vec2 w = vec2(fbm(q * 0.85 + vec2(t * 0.14, seed)),",
     "                fbm(q * 0.85 + vec2(seed + 4.7, -t * 0.11)));",
     "  float n = fbm(q + (w - 0.5) * writhe);",
-    "  float sharp = pow(max(0.0, 1.0 - abs(2.0 * n - 1.0) * 2.6), 6.0);",
+    "  float sharp = pow(max(0.0, 1.0 - abs(2.0 * n - 1.0) * 1.9), 5.0);",
     "  float wide  = pow(max(0.0, 1.0 - abs(2.0 * n - 1.0) * 1.15), 2.0);",
     "  return vec2(sharp, wide);",
     "}",
@@ -94,7 +96,7 @@
     "  float ang = atan(uv.y, uv.x);",
     "  float t = u_time;",
     "",
-    "  float breath = 1.0 + 0.08 * sin(t * u_pulseSpeed);",
+    "  float breath = 1.0 + 0.08 * sin(u_phase);",
     "  float orbR = 0.62 + 0.015 * u_intensity + 0.03 * u_audio;",
     "  float body = 1.0 - smoothstep(orbR - 0.04, orbR, r);",
     "",
@@ -108,12 +110,15 @@
     "  vec3 inner = cloudDye * cloudN * 0.20;",
     "",
     "  // ---- four writhing currents, four drift directions ----",
-    "  float dr = u_flowSpeed;",
+    "  // u_drift is JS-integrated (drift += dt * flowSpeed), never raw",
+    "  // speed * absolute time, so a state change smoothly changes the",
+    "  // RATE of drift instead of snapping the current phase/position.",
+    "  float dr = u_drift;",
     "  float wr = 1.8 + 1.2 * u_turbulence;",
-    "  vec2 fG = filpair(rot2(uv,  t * 0.05 * dr) * 2.6 + vec2( t * 0.12 * dr, 0.0),            t, 1.3, wr);",
-    "  vec2 fP = filpair(rot2(uv, -t * 0.06 * dr) * 2.7 + vec2(0.0,  t * 0.11 * dr),            t, 4.2, wr);",
-    "  vec2 fB = filpair(rot2(uv,  t * 0.04 * dr) * 2.5 + vec2(-t * 0.10 * dr,  t * 0.05 * dr), t, 7.9, wr);",
-    "  vec2 fV = filpair(rot2(uv, -t * 0.05 * dr) * 2.8 + vec2( t * 0.06 * dr, -t * 0.09 * dr), t, 11.6, wr);",
+    "  vec2 fG = filpair(rot2(uv,  dr * 0.05) * 2.6 + vec2( dr * 0.12, 0.0),          t, 1.3, wr);",
+    "  vec2 fP = filpair(rot2(uv, -dr * 0.06) * 2.7 + vec2(0.0,  dr * 0.11),          t, 4.2, wr);",
+    "  vec2 fB = filpair(rot2(uv,  dr * 0.04) * 2.5 + vec2(-dr * 0.10,  dr * 0.05),   t, 7.9, wr);",
+    "  vec2 fV = filpair(rot2(uv, -dr * 0.05) * 2.8 + vec2( dr * 0.06, -dr * 0.09),   t, 11.6, wr);",
     "",
     "  // ---- lightning strikes: smolder between, flash on surge, and",
     "  // light the cloud around the bolt; voice adds surge ----",
@@ -137,7 +142,7 @@
     "               + u_dyeB * u_weights.z + u_dyeV * u_weightV) / wsum;",
     "",
     "  // ---- core: waxes, bursts, and fades with activity ----",
-    "  float slow = 0.5 + 0.5 * sin(t * 0.31 * max(u_pulseSpeed, 0.2));",
+    "  float slow = 0.5 + 0.5 * sin(u_corePhase * 0.31);",
     "  float burst = pow(noise(vec2(t * 0.28, 7.3)), 3.0);",
     "  float fl = (0.10 + 0.30 * slow + 1.6 * burst)",
     "           * (0.35 + 1.1 * u_energy) + u_audio * 0.8;",
@@ -170,8 +175,8 @@
     "    float lanes = 34.0;",
     "    float lane = floor((ang / 6.2831853 + 0.5) * lanes);",
     "    float lh = hash(vec2(lane, 3.7));",
-    "    float speed = (0.25 + 0.55 * lh) * (0.6 + 1.4 * u_flowSpeed * 0.5);",
-    "    float cell = fract((r + t * speed * 0.22 + lh * 7.0) * 3.2);",
+    "    float laneSpeed = 0.25 + 0.55 * lh;",
+    "    float cell = fract((r + u_particlePhase * laneSpeed * 0.22 + lh * 7.0) * 3.2);",
     "    float dot_ = smoothstep(0.14, 0.0, abs(cell - 0.5) * 2.0 - 0.02);",
     "    float laneJitter = noise(vec2(lane * 1.7, t * 0.2));",
     "    float laneCenter = fract((ang / 6.2831853 + 0.5) * lanes) - 0.5;",
@@ -233,7 +238,8 @@
 
     this.u = {};
     var names = ["u_res", "u_time", "u_weights", "u_weightV", "u_intensity",
-      "u_energy", "u_turbulence", "u_flowSpeed", "u_pulseSpeed", "u_accent",
+      "u_energy", "u_turbulence", "u_drift", "u_phase", "u_corePhase",
+      "u_particlePhase", "u_accent",
       "u_accentAmt", "u_particleAmt", "u_dim", "u_octaves", "u_audio",
       "u_dyeG", "u_dyeP", "u_dyeB", "u_dyeV"];
     for (var i = 0; i < names.length; i++) {
@@ -271,6 +277,18 @@
     this.audioLevel = 0;
 
     this._t = 0;
+    // Integrated phase accumulators. State/mode changes smooth the
+    // *rate* (flowSpeed, pulseSpeed) via the existing current->target
+    // lerp below; these accumulate that rate over dt each frame instead
+    // of multiplying it against the absolute elapsed time in the shader.
+    // Multiplying a speed uniform by absolute time is what caused the
+    // orb to visibly jerk/snap whenever a state change nudged the speed:
+    // at large t, even a tiny speed delta is a huge phase jump. Elapsed
+    // real time never appears in the drift/pulse/particle math anymore.
+    this._drift = 0;
+    this._phase = 0;
+    this._corePhase = 0;
+    this._particlePhase = 0;
     this._last = performance.now();
     this._acc = 0;
     this._frames = 0;
@@ -342,6 +360,15 @@
       c[key] += (t[key] - c[key]) * k;
     });
 
+    // Integrate phase from the smoothed (never-jumping) current speeds.
+    // Scaled by timeScale like _t itself, so Reduced Motion slows this
+    // in step with everything else instead of leaving it at full rate.
+    var dtScaled = dt * this.timeScale;
+    this._drift += dtScaled * c.flowSpeed;
+    this._phase += dtScaled * c.pulseSpeed;
+    this._corePhase += dtScaled * Math.max(c.pulseSpeed, 0.2);
+    this._particlePhase += dtScaled * (0.6 + 0.7 * c.flowSpeed);
+
     this.resize();
     var gl = this.gl, u = this.u;
     gl.uniform2f(u.u_res, this.canvas.width, this.canvas.height);
@@ -351,8 +378,10 @@
     gl.uniform1f(u.u_intensity, c.intensity);
     gl.uniform1f(u.u_energy, c.energy);
     gl.uniform1f(u.u_turbulence, c.turbulence);
-    gl.uniform1f(u.u_flowSpeed, c.flowSpeed);
-    gl.uniform1f(u.u_pulseSpeed, c.pulseSpeed);
+    gl.uniform1f(u.u_drift, this._drift);
+    gl.uniform1f(u.u_phase, this._phase);
+    gl.uniform1f(u.u_corePhase, this._corePhase);
+    gl.uniform1f(u.u_particlePhase, this._particlePhase);
     gl.uniform3f(u.u_accent, c.accent[0], c.accent[1], c.accent[2]);
     gl.uniform1f(u.u_accentAmt, c.accentAmt);
     gl.uniform1f(u.u_particleAmt, this.reducedMotion ? 0.0 : c.particleAmt);

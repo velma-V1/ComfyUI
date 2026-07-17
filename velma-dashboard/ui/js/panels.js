@@ -191,15 +191,35 @@
 
   /* ---------- capability ring + list ---------- */
 
+  /* Deterministic 0..1 pseudo-random from an index — same seed every
+     load, so orb sizes vary "like planets" without jumping on refresh. */
+  function seeded(i) {
+    var s = Math.sin(i * 12.9898 + 3.7) * 43758.5453;
+    return s - Math.floor(s);
+  }
+
+  var CAP_BASE_SIZE = 45; // 50% bigger than the original 30px
+
   function buildCapabilityRing(ringNode, caps) {
     var nodes = {};
     caps.forEach(function (cap, i) {
       var orb = el("div", "cap-orb");
       orb.style.setProperty("--c", cap.color);
       orb.title = cap.id;
+      var size = CAP_BASE_SIZE * (0.9 + seeded(i) * 0.2); // slight variance
+      orb.style.width = size.toFixed(1) + "px";
+      orb.style.height = size.toFixed(1) + "px";
+      var canvas = el("canvas");
+      orb.appendChild(canvas);
       orb.appendChild(el("span", "cap-tag", cap.label));
       ringNode.appendChild(orb);
-      nodes[cap.id] = { node: orb, index: i, color: cap.color, vis: 0.55 };
+      var mini = window.VELMA.MiniOrb
+        ? new window.VELMA.MiniOrb(canvas, cap.color, i, size)
+        : null;
+      nodes[cap.id] = {
+        node: orb, canvas: canvas, mini: mini, baseSize: size,
+        index: i, color: cap.color, vis: 0.55,
+      };
     });
     return nodes;
   }

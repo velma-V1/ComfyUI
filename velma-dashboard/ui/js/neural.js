@@ -118,7 +118,8 @@
       ctx.lineWidth = 1;
       for (var d = 0; d < 4; d++) {
         var da = cap.index * 1.7 + d * (Math.PI / 2) + 0.4;
-        var r0 = 15 * (cap.scale || 1), r1 = r0 + 9 + (d % 2) * 5;
+        var baseR = (cap.baseSize || 45) / 2;
+        var r0 = baseR * (cap.scale || 1), r1 = r0 + 9 + (d % 2) * 5;
         ctx.beginPath();
         ctx.moveTo(p[0] + Math.cos(da) * r0, p[1] + Math.sin(da) * r0);
         ctx.lineTo(p[0] + Math.cos(da + 0.25) * r1, p[1] + Math.sin(da + 0.25) * r1);
@@ -129,7 +130,7 @@
       var think = l.thinking ? 0.22 * (0.5 + 0.5 * Math.sin(t * 18 + cap.index)) : 0;
       var glow = Math.min(1, l.charge + think);
       if (glow > 0.02) {
-        var gr = 26 * (cap.scale || 1) * (1 + glow);
+        var gr = (cap.baseSize || 45) * 0.58 * (cap.scale || 1) * (1 + glow);
         var g = ctx.createRadialGradient(p[0], p[1], 0, p[0], p[1], gr);
         g.addColorStop(0, rgba(l.rgb, 0.30 * glow * df + 0.05));
         g.addColorStop(1, rgba(l.rgb, 0));

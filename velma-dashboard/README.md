@@ -46,10 +46,21 @@ host-validation work, per the project's "not yet proven" list.
 
 ## Design rules implemented
 
-- **Orb identity** — the Orb always blends neon green / blue / pink in a
-  fluid tie-dye pattern (domain-warped fbm noise in a fragment shader).
-  State accents only tint the rim, halo, and particles; weights are floored
-  at 0.15 so no identity color can ever be driven to zero.
+- **Orb identity** — ION STORM design (chosen in review): a dim rolling
+  storm cloud inside the Orb, with four living filament currents (green /
+  pink / blue / purple) that writhe and periodically strike like
+  lightning, lighting the cloud around the bolt. State accents only tint
+  the rim and particles; weights are floored at 0.15 so no identity color
+  can ever be driven to zero.
+- **No animation jerk** — flow/pulse "speed" only ever changes the *rate*
+  of motion. The shader never multiplies a live speed uniform against
+  absolute elapsed time (`t * speed`), which used to cause a visible snap
+  whenever a state or mode change nudged the speed at a large `t` — even
+  a tiny speed delta times a large elapsed time is a huge phase jump.
+  Instead `Orb.frame()` integrates four phase accumulators
+  (`_drift`, `_phase`, `_corePhase`, `_particlePhase`) by `dt * speed`
+  every frame and passes those to the shader, so a speed change bends the
+  curve smoothly instead of snapping the position/rotation.
 - **Idle** — slow breathing pulse, gentle internal flow, ambient inward
   particle drift.
 - **Energy direction** — external particles flow inward toward the Orb.
@@ -62,9 +73,14 @@ host-validation work, per the project's "not yet proven" list.
   caps the Orb at 30 fps, and cuts noise octaves so it never competes with a
   running game. Modes never change the Orb's identity.
 - **Capability orbs** — neurons in a nervous system around the Orb
-  (design C4 "Loose Council" from review). Each soma rides a slowly
-  rotating, breathing ring and connects to the core by a curved axon
-  with dendrite stubs. Energy moves as a conversation: the core sends a
+  (design C4 "Loose Council" from review), spread further out on a
+  wider ring. Each is its own small lightning-storm planet: a canvas 2D
+  "mini orb" with a dark cloudy body tinted in the capability's color and
+  a couple of independently flickering jagged bolts — not a flat lit
+  sphere — sized ~50% larger than the original pass with a slight
+  per-orb size variance so they read as individual planets rather than
+  identical copies. Each soma connects to the core by a curved axon with
+  dendrite stubs. Energy moves as a conversation: the core sends a
   near-white call pulse out, the neuron flashes and dwells while it
   thinks, then answers back in its own color, and the core flashes on
   receipt. Status drives the dialogue — active neurons are called often,

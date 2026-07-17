@@ -37,6 +37,7 @@
   var orb = null;
   try {
     orb = new V.Orb(canvas);
+    V.orbInstance = orb;
   } catch (err) {
     var msg = document.createElement("div");
     msg.textContent = "WebGL unavailable: " + err.message;
@@ -368,10 +369,10 @@
       var c = capNodes[id];
       var i = c.index;
       var a = (i / capCount) * Math.PI * 2 + t * 0.06;
-      var x = cx + Math.cos(a) * base * 0.37
-            + Math.cos(t * 0.31 + i * 2.7) * w * 0.022;
-      var y = cy + Math.sin(a) * base * 0.29
-            + Math.sin(t * 0.27 + i * 1.9) * h * 0.022;
+      var x = cx + Math.cos(a) * base * 0.46
+            + Math.cos(t * 0.31 + i * 2.7) * w * 0.026;
+      var y = cy + Math.sin(a) * base * 0.37
+            + Math.sin(t * 0.27 + i * 1.9) * h * 0.026;
       var depth = Math.sin(a);           // -1 behind .. +1 in front
       var df = 0.5 + 0.5 * depth;
       var scale = 0.85 + 0.25 * df;
@@ -385,6 +386,14 @@
       c.node.style.filter = depth > 0 ? "" : "blur(0.5px) saturate(0.85)";
       // published for the neural link layer
       c.x = x; c.y = y; c.scale = scale; c.depthFactor = df;
+
+      // mini lightning-storm body: brighten with real conversation state
+      // (charge/thinking from the neural link layer) as well as status
+      if (c.mini) {
+        var link = neural && neural.links ? neural.links[id] : null;
+        var chargeBoost = link ? Math.max(link.charge, link.thinking ? 0.6 : 0) : 0;
+        c.mini.draw(t, Math.min(1, vis * 0.35 + chargeBoost));
+      }
     });
   }
 
@@ -396,7 +405,7 @@
       var c = capNodes[id];
       return {
         id: id, index: c.index, color: c.color,
-        status: c.status || "available",
+        status: c.status || "available", baseSize: c.baseSize,
         x: c.x, y: c.y, scale: c.scale, depthFactor: c.depthFactor,
       };
     });
