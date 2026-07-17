@@ -1,9 +1,9 @@
 :root {
   --bg: #060309;
-  --panel-bg: rgba(13, 7, 22, 0.78);
-  --panel-edge: rgba(168, 84, 255, 0.35);
-  --panel-edge-dim: rgba(168, 84, 255, 0.16);
-  --titlebar: linear-gradient(180deg, rgba(38, 16, 56, 0.9), rgba(16, 7, 26, 0.9));
+  --panel-bg: rgba(11, 5, 19, 0.85);
+  --panel-edge: rgba(168, 84, 255, 0.42);
+  --panel-edge-dim: rgba(168, 84, 255, 0.18);
+  --titlebar: linear-gradient(180deg, rgba(44, 16, 66, 0.92), rgba(14, 5, 24, 0.92));
   --green: #39ff8e;
   --pink: #ff3df0;
   --blue: #2f9bff;
@@ -157,15 +157,49 @@ body {
   pointer-events: auto;
   border: 1px solid var(--panel-edge);
   border-radius: 3px;
-  background: var(--panel-bg);
+  background:
+    /* corner brackets: top-right + bottom-left */
+    linear-gradient(var(--pink), var(--pink)) top right / 14px 2px no-repeat,
+    linear-gradient(var(--pink), var(--pink)) top right / 2px 14px no-repeat,
+    linear-gradient(var(--purple), var(--purple)) bottom left / 14px 2px no-repeat,
+    linear-gradient(var(--purple), var(--purple)) bottom left / 2px 14px no-repeat,
+    var(--panel-bg);
   backdrop-filter: blur(7px);
   padding: 0 12px 10px;
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.6),
-    0 8px 28px rgba(0, 0, 0, 0.55),
-    0 0 18px rgba(168, 84, 255, 0.10),
-    inset 0 0 30px rgba(6, 2, 12, 0.6);
+    0 0 0 1px rgba(0, 0, 0, 0.65),
+    0 10px 30px rgba(0, 0, 0, 0.65),
+    0 0 22px rgba(168, 84, 255, 0.16),
+    0 0 6px rgba(255, 61, 240, 0.10),
+    inset 0 0 34px rgba(4, 1, 9, 0.75);
 }
+
+/* neon hairline across the top edge */
+.panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    var(--green), var(--pink), var(--purple), var(--blue));
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+/* faint CRT scanlines over the glass */
+.panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(0deg,
+    rgba(255, 255, 255, 0.022) 0px, rgba(255, 255, 255, 0.022) 1px,
+    transparent 1px, transparent 3px);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
 .panel.dragging { opacity: 0.85; }
 .panel.minimized { padding-bottom: 0; }
 .panel.minimized > *:not(h2) { display: none; }
@@ -184,9 +218,10 @@ body {
   letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--pink);
-  text-shadow: 0 0 8px rgba(255, 61, 240, 0.45);
+  text-shadow: 0 0 8px rgba(255, 61, 240, 0.55);
   background: var(--titlebar);
   border-bottom: 1px solid var(--panel-edge-dim);
+  box-shadow: 0 7px 14px -10px rgba(255, 61, 240, 0.55);
   margin: 0 -12px 8px;
   padding: 7px 12px 6px;
   display: flex;
@@ -195,6 +230,13 @@ body {
   cursor: grab;
   user-select: none;
   touch-action: none;
+}
+.panel h2::before {
+  content: "\2726"; /* four-pointed sparkle */
+  color: var(--purple);
+  text-shadow: 0 0 6px var(--purple);
+  font-size: 10px;
+  flex: none;
 }
 .panel.dragging h2 { cursor: grabbing; }
 
